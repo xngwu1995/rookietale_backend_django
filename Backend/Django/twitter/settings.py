@@ -25,8 +25,8 @@ SECRET_KEY = 'nm)p29worx_7@q2o%=!4g6px(o=fil1ydq37!)c#e+_nlp_29m'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['172.17.0.2', '192.168.33.10', 'localhost']
-
+ALLOWED_HOSTS = ["127.0.0.1", '192.168.33.10', 'localhost']
+INTERNAL_IPS = ["127.0.0.1", '192.168.33.10', 'localhost', '172.17.0.1']
 
 # Application definition
 
@@ -38,6 +38,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    "debug_toolbar",
+    'tweets',
 ]
 
 REST_FRAMEWORK = {
@@ -53,6 +55,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "debug_toolbar.middleware.DebugToolbarMiddleware",
 ]
 
 ROOT_URLCONF = 'twitter.urls'
