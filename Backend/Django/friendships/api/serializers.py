@@ -1,5 +1,4 @@
 from django.contrib.auth.models import User
-
 from accounts.api.serializers import UserSerializerForFriendship
 from friendships.models import Friendship
 from rest_framework import serializers
