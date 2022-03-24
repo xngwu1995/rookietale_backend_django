@@ -6,7 +6,7 @@ from tweets.models import Tweet
 # need add '/' at end，otherwise will result in 301 redirect
 TWEET_LIST_API = '/api/tweets/'
 TWEET_CREATE_API = '/api/tweets/'
-
+TWEET_RETRIEVE_API = '/api/tweets/{}/'
 
 class TweetApiTests(TestCase):
 
@@ -59,7 +59,7 @@ class TweetApiTests(TestCase):
         })
         self.assertEqual(response.status_code, 400)
 
-        # 正常发帖
+        # normal create tweet
         tweets_count = Tweet.objects.count()
         response = self.user1_client.post(TWEET_CREATE_API, {
             'content': 'Hello World, this is my first tweet!'
@@ -67,3 +67,22 @@ class TweetApiTests(TestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.data['user']['id'], self.user1.id)
         self.assertEqual(Tweet.objects.count(), tweets_count + 1)
+
+    def test_retrieve(self):
+        # tweet id not existing
+        url = TWEET_RETRIEVE_API.format(-1)
+        response = self.anonymous_client.get(url)
+        self.assertEqual(response.status_code, 404)
+
+        # get tweet and comments
+        tweet = self.create_tweet(self.user1)
+        url = TWEET_RETRIEVE_API.format(tweet.id)
+        response = self.anonymous_client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data['comments']), 0)
+
+        self.create_comment(self.user2, tweet, 'ok,((****))')
+        self.create_comment(self.user1, tweet)
+        self.create_comment(self.user1, self.create_tweet(self.user2), '...')
+        response = self.anonymous_client.get(url)
+        self.assertEqual(len(response.data['comments']), 2)
