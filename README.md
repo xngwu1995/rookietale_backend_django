@@ -27,4 +27,5 @@
   4. update a comments: /api/comments/{comments_id}/
 
 ## likes API introduction:
-
+  1. create a like for a tweet or comment: /api/likes/
+  2. cancel a like: /api/likes/cancel/
