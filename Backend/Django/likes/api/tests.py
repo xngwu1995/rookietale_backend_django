@@ -2,7 +2,7 @@ from testing.testcases import TestCase
 
 
 LIKE_BASE_URL = '/api/likes/'
-
+LIKE_CANCEL_URL = '/api/likes/cancel/'
 
 class LikeApiTests(TestCase):
 
@@ -74,3 +74,58 @@ class LikeApiTests(TestCase):
         self.ybb_client.post(LIKE_BASE_URL, data)
         self.assertEqual(comment.like_set.count(), 2)
 
+    def test_cancel(self):
+        tweet = self.create_tweet(self.daniel)
+        comment = self.create_comment(self.ybb, tweet)
+        like_comment_data = {'content_type': 'comment', 'object_id': comment.id}
+        like_tweet_data = {'content_type': 'tweet', 'object_id': tweet.id}
+        self.daniel_client.post(LIKE_BASE_URL, like_comment_data)
+        self.ybb_client.post(LIKE_BASE_URL, like_tweet_data)
+        self.assertEqual(tweet.like_set.count(), 1)
+        self.assertEqual(comment.like_set.count(), 1)
+
+        # login required
+        response = self.anonymous_client.post(LIKE_CANCEL_URL, like_comment_data)
+        self.assertEqual(response.status_code, 403)
+
+        # get is not allowed
+        response = self.daniel_client.get(LIKE_CANCEL_URL, like_comment_data)
+        self.assertEqual(response.status_code, 405)
+
+        # wrong content_type
+        response = self.daniel_client.post(LIKE_CANCEL_URL, {
+            'content_type': 'wrong',
+            'object_id': 1,
+        })
+        self.assertEqual(response.status_code, 400)
+
+        # wrong object_id
+        response = self.daniel_client.post(LIKE_CANCEL_URL, {
+            'content_type': 'comment',
+            'object_id': -1,
+        })
+        self.assertEqual(response.status_code, 400)
+
+        # ybb no like comment before
+        response = self.ybb_client.post(LIKE_CANCEL_URL, like_comment_data)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(tweet.like_set.count(), 1)
+        self.assertEqual(comment.like_set.count(), 1)
+
+        # daniel no like tweet before
+        response = self.daniel_client.post(LIKE_CANCEL_URL, like_tweet_data)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(tweet.like_set.count(), 1)
+        self.assertEqual(comment.like_set.count(), 1)
+
+        # ybb cancel like for tweet
+        response = self.ybb_client.post(LIKE_CANCEL_URL, like_tweet_data)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(tweet.like_set.count(), 0)
+        self.assertEqual(comment.like_set.count(), 1)
+
+        # daniel cancel like for comment
+        response = self.daniel_client.post(LIKE_CANCEL_URL, like_comment_data)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(tweet.like_set.count(), 0)
+        self.assertEqual(comment.like_set.count(), 0)
