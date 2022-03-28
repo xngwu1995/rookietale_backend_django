@@ -23,7 +23,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'nm)p29worx_7@q2o%=!4g6px(o=fil1ydq37!)c#e+_nlp_29m'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ["127.0.0.1", '192.168.33.10', 'localhost']
 INTERNAL_IPS = ["127.0.0.1", '192.168.33.10', 'localhost', '172.17.0.1']
