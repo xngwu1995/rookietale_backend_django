@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/3.1/ref/settings/
 """
 
 from pathlib import Path
+import pymysql
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,8 +26,8 @@ SECRET_KEY = 'nm)p29worx_7@q2o%=!4g6px(o=fil1ydq37!)c#e+_nlp_29m'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["127.0.0.1", '192.168.33.10', 'localhost', '172.17.0.1', "host.docker.internal"]
-INTERNAL_IPS = ["127.0.0.1", '192.168.33.10', 'localhost', '172.17.0.1', "host.docker.internal"]
+ALLOWED_HOSTS = ["127.0.0.1", '192.168.33.10', 'localhost', '172.17.0.1', "10.0.0.26", "0.0.0.0"]
+INTERNAL_IPS = ["127.0.0.1", '192.168.33.10', 'localhost', '172.17.0.1', "10.0.0.26", "0.0.0.0"]
 
 # Application definition
 
@@ -43,6 +44,7 @@ INSTALLED_APPS = [
     'rest_framework',
     "debug_toolbar",
     'django_filters',
+    'corsheaders',
 
     # project apps
     'tweets',
@@ -58,6 +60,7 @@ REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend',
     ],
+    'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.AllowAny'],
 }
 
 MIDDLEWARE = [
@@ -69,6 +72,15 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     "debug_toolbar.middleware.DebugToolbarMiddleware",
+    'corsheaders.middleware.CorsMiddleware',
+]
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://10.0.0.26:3000",
 ]
 
 ROOT_URLCONF = 'twitter.urls'
@@ -99,10 +111,10 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'twitter',
-        'HOST': '172.17.0.2',
+        'HOST': '127.0.0.1',
         'PORT': '3306',
-        'USER': 'root',
-        'PASSWORD': 'daniel1995',
+        'USER': 'dbadmin',
+        'PASSWORD': 'wert66',
     }
 }
 
@@ -144,7 +156,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/3.1/howto/static-files/
 
 STATIC_URL = '/static/'
-
+pymysql.version_info = (1, 4, 2, "final", 0)
+pymysql.install_as_MySQLdb()
 try:
     from .local_settings import *
 except:
