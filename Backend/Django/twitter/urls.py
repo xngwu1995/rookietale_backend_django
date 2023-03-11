@@ -17,6 +17,7 @@ from django.contrib import admin
 from django.urls import include, path
 from rest_framework import routers
 from accounts.api.views import UserViewSet, AccountViewSet
+from inbox.api.views import NotificationViewSet
 from tweets.api.views import TweetViewSet
 from friendships.api.views import FriendshipViewSet
 from newsfeeds.api.views import NewsFeedViewSet
@@ -32,6 +33,7 @@ router.register(r'api/friendships', FriendshipViewSet, basename = 'friendships')
 router.register(r'api/newsfeeds', NewsFeedViewSet, basename = 'newsfeeds')
 router.register(r'api/comments', CommentViewSet, basename = 'comments')
 router.register(r'api/likes', LikeViewSet, basename = 'likes')
+router.register(r'api/notifications', NotificationViewSet, basename = 'notifications')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
