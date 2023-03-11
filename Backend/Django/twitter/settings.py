@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "debug_toolbar",
     'django_filters',
     'corsheaders',
+    'notifications',
 
     # project apps
     'tweets',
@@ -111,7 +112,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'twitter',
-        'HOST': '127.0.0.1',
+        'HOST': '0.0.0.0',
         'PORT': '3306',
         'USER': 'dbadmin',
         'PASSWORD': 'wert66',
