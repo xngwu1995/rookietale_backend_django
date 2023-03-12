@@ -44,7 +44,6 @@ INSTALLED_APPS = [
     'rest_framework',
     "debug_toolbar",
     'django_filters',
-    'corsheaders',
     'notifications',
 
     # project apps
@@ -61,7 +60,9 @@ REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend',
     ],
-    'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.AllowAny'],
+    'DEFAULT_PERMISSION_CLASSES': [
+       'rest_framework.permissions.AllowAny',
+    ]
 }
 
 MIDDLEWARE = [
@@ -73,15 +74,6 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     "debug_toolbar.middleware.DebugToolbarMiddleware",
-    'corsheaders.middleware.CorsMiddleware',
-]
-
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:8000",
-    "http://127.0.0.1:8000",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://10.0.0.26:3000",
 ]
 
 ROOT_URLCONF = 'twitter.urls'
@@ -112,7 +104,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'twitter',
-        'HOST': '127.0.0.1',
+        'HOST': '0.0.0.0',
         'PORT': '3306',
         'USER': 'dbadmin',
         'PASSWORD': 'wert66',
