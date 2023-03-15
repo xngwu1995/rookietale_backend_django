@@ -5,6 +5,7 @@ __pycache__/
 *.box
 .vagrant
 Vagrantfile
+media/
 # C extensions
 *.so
 
