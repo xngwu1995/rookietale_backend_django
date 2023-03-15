@@ -176,8 +176,6 @@ MEDIA_ROOT = 'media/'
 pymysql.version_info = (1, 4, 2, "final", 0)
 pymysql.install_as_MySQLdb()
 
-AWS_ACCESS_KEY_ID = 'AKIAZBWR5YMMLZEELYID'
-AWS_SECRET_ACCESS_KEY = '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'
 
 # try:
 #     from .local_settings import *
