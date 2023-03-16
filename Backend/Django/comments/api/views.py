@@ -32,13 +32,16 @@ class CommentViewSet(viewsets.GenericViewSet):
 	@required_params(params=['tweet_id'])
 	def list(self, request, *args, **kwargs):
 		queryset = self.get_queryset()
-		comments = self.filter_queryset(queryset)\
-			.prefetch_related('user')\
-			.order_by('created_at')
-		serializer = CommentSerializer(comments, many=True)
-		return Response({
-			'comments': serializer.data
-		}, status=status.HTTP_200_OK)
+		comments = self.filter_queryset(queryset).order_by('created_at')	
+		serializer = CommentSerializer(
+            comments,
+            context={'request': request},
+            many=True,
+        )
+		return Response(
+            {'comments': serializer.data},
+            status=status.HTTP_200_OK,
+        )
 
 	def create(self, request, *args, **kwargs):
 		data = {
