@@ -42,7 +42,6 @@ class FriendshipViewSet(viewsets.GenericViewSet):
 
     @action(methods=['POST'], detail=True, permission_classes=[IsAuthenticated])
     def follow(self, request, pk):
-        follower_user = self.get_object()
         # if duplicate request
         # use silent processing
         if Friendship.objects.filter(from_user=request.user, to_user=pk).exists():
@@ -52,7 +51,7 @@ class FriendshipViewSet(viewsets.GenericViewSet):
             }, status=status.HTTP_201_CREATED)
         serializer = FriendshipSerializerForCreate(data={
             'from_user_id': request.user.id,
-            'to_user_id': follower_user.id,
+            'to_user_id': pk,
         })
         if not serializer.is_valid():
             return Response({
@@ -67,8 +66,7 @@ class FriendshipViewSet(viewsets.GenericViewSet):
 
     @action(methods=['POST'], detail=True, permission_classes=[IsAuthenticated])
     def unfollow(self, request, pk):
-        unfollower_user = self.get_object()
-        if request.user.id == unfollower_user.id:
+        if request.user.id == int(pk):
             return Response({
                 'success': False,
                 'message': 'You cannot unfollow yourself',
@@ -82,7 +80,7 @@ class FriendshipViewSet(viewsets.GenericViewSet):
         '''
         deleted, _ = Friendship.objects.filter(
             from_user=request.user,
-            to_user=unfollower_user,
+            to_user=pk,
         ).delete()
         return Response({'success': True, 'deleted': deleted})
 
