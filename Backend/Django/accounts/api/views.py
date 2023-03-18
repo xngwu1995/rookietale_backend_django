@@ -1,3 +1,4 @@
+import random
 from django.contrib.auth.models import User
 from rest_framework import viewsets
 from rest_framework import permissions
@@ -28,6 +29,26 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all().order_by('-date_joined')
     serializer_class = UserSerializerWithProfile
     permission_classes = (permissions.IsAuthenticated,)
+
+    @action(methods=['GET'], detail=False)
+    def random_users(self, request):
+        current_user = User.objects.get(id=request.user.id)
+        Users = User.objects.filter(
+                userprofile__nickname__isnull=False,
+            ).exclude(
+                id=current_user.id,
+            ).exclude(
+                id__in=current_user.following_friendship_set.values_list('to_user_id')
+            )
+        total_users = Users.count()
+        if total_users <= 3:
+            users = Users
+        else:
+            random_indices = random.sample(range(total_users), 3)
+            users = [Users[index] for index in random_indices]
+
+        serializer = UserSerializerWithProfile(users, many=True)
+        return Response(serializer.data)
 
 
 class AccountViewSet(viewsets.ViewSet):
