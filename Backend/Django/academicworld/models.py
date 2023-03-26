@@ -15,12 +15,19 @@ class Faculty(models.Model):
     phone = models.CharField(max_length=512, null=True, blank=True)
     photo_url = models.CharField(max_length=512, null=True, blank=True)
     university = models.ForeignKey(University, on_delete=models.SET_NULL, null=True)
+    group1 = models.FloatField(null=True, blank=True)
+    group2 = models.FloatField(null=True, blank=True)
+    group3 = models.FloatField(null=True, blank=True)
+    group4 = models.FloatField(null=True, blank=True)
+    group5 = models.FloatField(null=True, blank=True)
+    group6 = models.FloatField(null=True, blank=True)
 
     def __str__(self):
         return self.name
 
 class Keyword(models.Model):
     name = models.CharField(max_length=512)
+    group = models.CharField(max_length=512, null=True, blank=True)
 
     def __str__(self):
         return self.name
@@ -41,6 +48,7 @@ class FacultyKeyword(models.Model):
 
     class Meta:
         unique_together = ('faculty', 'keyword')
+        index_together = (('keyword', 'score'))
 
 class FacultyPublication(models.Model):
     faculty = models.ForeignKey(Faculty, on_delete=models.CASCADE)
