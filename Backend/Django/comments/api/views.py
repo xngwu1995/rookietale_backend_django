@@ -60,7 +60,7 @@ class CommentViewSet(viewsets.GenericViewSet):
 		comment = serializer.save()
 		NotificationService.send_comment_notification(comment)
 		return Response(
-			CommentSerializer(comment).data,
+			CommentSerializer(comment, context={'request': request}).data,
 			status=status.HTTP_201_CREATED,
 		)
 
