@@ -21,7 +21,6 @@ class CommentSerializer(serializers.ModelSerializer):
             'likes_count',
             'has_liked',
             'created_at',
-            'updated_at',
         )
 
     def get_likes_count(self, obj):

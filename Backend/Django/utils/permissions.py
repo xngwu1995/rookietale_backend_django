@@ -11,5 +11,4 @@ class IsObjectOwner(BasePermission):
 		return True
 
 	def has_object_permission(self, request, view, obj):
-		import pdb; pdb.set_trace()
 		return request.user == obj.user
