@@ -67,9 +67,8 @@ class CommentViewSet(viewsets.GenericViewSet):
 	def update(self, request, *args, **kwargs):
 		# Get_object is a function in DRF, will raise 404 error,
 		# if it can not get object.
-		comment = self.get_object()
 		serializer = CommentSerializerForUpdate(
-			instance=comment,
+			instance=self.get_object(),
 			data=request.data,
 		)
 		if not serializer.is_valid():
@@ -79,7 +78,7 @@ class CommentViewSet(viewsets.GenericViewSet):
 			}, status=status.HTTP_400_BAD_REQUEST)
 		comment = serializer.save()
 		return Response(
-			CommentSerializer(comment).data,
+			CommentSerializer(comment, context={'request': request}).data,
 			status=status.HTTP_200_OK,
 		)
 

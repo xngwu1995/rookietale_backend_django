@@ -9,6 +9,7 @@ from friendships.api.serializers import (
     FriendshipSerializerForCreate,
 )
 from django.contrib.auth.models import User
+from utils.paginations import FriendshipPagination
 
 
 class FriendshipViewSet(viewsets.GenericViewSet):
@@ -18,27 +19,23 @@ class FriendshipViewSet(viewsets.GenericViewSet):
     # because detail=True in actions, it will use get_object() first
     # queryset.filter(pk=1) will check the object
     queryset = User.objects.all()
-    serializer_class = FriendshipSerializerForCreate
+    # define my own pagination
+    pagination_class = FriendshipPagination
 
     @action(methods=['GET'], detail=True, permission_classes=[AllowAny])
     def followers(self, request, pk):
-        # GET /api/friendships/1/followers
-        friendship = Friendship.objects.filter(to_user_id=pk)
-        serializer = FollowerSerializer(friendship, many=True)
-        return Response(
-            {'followers': serializer.data},
-            status=status.HTTP_200_OK,
-        )
+        friendship = Friendship.objects.filter(to_user_id=pk).order_by('-created_at')
+        page = self.paginate_queryset(friendship)
+        serializer = FollowerSerializer(page, many=True, context={'request': request})
+        return self.get_paginated_response(serializer.data)
 
     @action(methods=['GET'], detail=True, permission_classes=[AllowAny])
     def followings(self, request, pk):
         # GET /api/friendships/1/followers
-        friendship = Friendship.objects.filter(from_user_id=pk)
-        serializer = FollowingSerializer(friendship, many=True)
-        return Response(
-            {'followings': serializer.data},
-            status=status.HTTP_200_OK,
-        )
+        friendship = Friendship.objects.filter(from_user_id=pk).order_by('-created_at')
+        page = self.paginate_queryset(friendship)
+        serializer = FollowingSerializer(page, many=True, context={'request': request})
+        return self.get_paginated_response(serializer.data)
 
     @action(methods=['POST'], detail=True, permission_classes=[IsAuthenticated])
     def follow(self, request, pk):
@@ -60,7 +57,7 @@ class FriendshipViewSet(viewsets.GenericViewSet):
             }, status=status.HTTP_400_BAD_REQUEST)
         instance = serializer.save()
         return Response(
-            FollowingSerializer(instance).data,
+            FollowingSerializer(instance, context={'request': request}).data,
             status=status.HTTP_201_CREATED
         )
 
