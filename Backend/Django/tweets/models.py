@@ -10,6 +10,8 @@ class Tweet(models.Model):
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     content = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
+    likes_count = models.IntegerField(default=0, null=True)
+    comments_count = models.IntegerField(default=0, null=True)
 
     class Meta:
         index_together = (('user', 'created_at'),)

@@ -56,13 +56,17 @@ class SignupSerializer(serializers.ModelSerializer):
     username = serializers.CharField(max_length = 20, min_length = 6)
     password = serializers.CharField(max_length = 20, min_length = 6)
     email = serializers.EmailField()
-
+    inviation = serializers.CharField(max_length = 20, min_length = 1)
     class Meta:
         model = User
-        fields = ('username', 'email', 'password')
+        fields = ('username', 'email', 'password', 'inviation')
 
     # will be called when is_valid
     def validate(self, data):
+        if data['inviation'].lower() != 'xuguang':
+            raise exceptions.ValidationError({
+                    'inviation': 'This code is not correct.'
+                })
         # check not allowed characteristic
         for ch in data['username']:
             if ch in "()%@":

@@ -1,3 +1,4 @@
+import random
 from accounts.api.serializers import UserSerializerForTweet
 from comments.api.serializers import CommentSerializer
 from likes.api.serializers import LikeSerializer
@@ -30,10 +31,20 @@ class TweetSerializer(serializers.ModelSerializer):
         )
 
     def get_likes_count(self, obj):
-        return obj.like_set.count()
+        if random.randint(0, 10000) == 0:
+            likes_count = obj.like_set.count()
+            obj.likes_count = likes_count
+            obj.save()
+            return likes_count
+        return obj.likes_count
 
     def get_comments_count(self, obj):
-        return obj.comment_set.count()
+        if random.randint(0, 10000) == 0:
+            comments_count = obj.comment_set.count()
+            obj.comments_count = comments_count
+            obj.save()
+            return comments_count
+        return obj.comments_count
 
     def get_has_liked(self, obj):
         return LikeService.has_liked(self.context['request'].user, obj)

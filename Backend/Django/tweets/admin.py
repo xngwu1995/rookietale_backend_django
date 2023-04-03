@@ -9,6 +9,8 @@ class TweetAdmin(admin.ModelAdmin):
         'created_at',
         'user',
         'content',
+        'likes_count',
+        'comments_count',
     )
 
 @admin.register(TweetPhoto)

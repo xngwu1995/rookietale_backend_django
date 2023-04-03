@@ -11,3 +11,7 @@ TWEET_PHOTO_STATUS_CHOICES = (
 )
 
 TWEET_PHOTOS_UPLOAD_LIMIT = 4
+
+# TWEETSTYPE = {
+#     'medias':  tweetphoto__isnull=False,
+# }
