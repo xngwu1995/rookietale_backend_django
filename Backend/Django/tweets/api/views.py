@@ -9,28 +9,44 @@ from tweets.api.serializers import (
 )
 from tweets.models import Tweet
 from utils.decorators import required_params
-
+from utils.paginations import EndlessPagination
 
 class TweetViewSet(viewsets.GenericViewSet):
     queryset = Tweet.objects.all()
     serializer_class = TweetSerializerForCreate
+    pagination_class = EndlessPagination
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
             return [AllowAny()]
         return [IsAuthenticated()]
 
-    @required_params(params=['user_id'])
+    @required_params(params=['user_id', 'type'])
     def list(self, request):
+        user_id = request.query_params['user_id']
+        request_tweet_type = request.query_params['type']
+
+        filter_type = {
+            'tweet': {},
+            'likes': {'likes_count__gt': 0},
+            'replies': {'comments_count__gt': 0},
+            'media': {'tweetphoto__isnull': False}
+        }
+
+        filteration = filter_type.get(request_tweet_type, {})
+
         tweets = Tweet.objects.filter(
-            user_id=request.query_params['user_id']
-        ).order_by('-created_at')
+            user_id=user_id,
+            **filteration
+        ).order_by('-created_at').distinct()
+
+        tweets = self.paginate_queryset(tweets)
         serializer = TweetSerializer(
             tweets,
             context={'request': request},
             many=True,
         )
-        return Response({'tweets': serializer.data})
+        return self.get_paginated_response(serializer.data)
 
     def retrieve(self, request, *args, **kwargs):
         serializer = TweetSerializerForDetail(

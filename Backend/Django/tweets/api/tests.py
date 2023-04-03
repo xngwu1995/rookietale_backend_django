@@ -35,12 +35,12 @@ class TweetApiTests(TestCase):
         # 正常 request
         response = self.anonymous_client.get(TWEET_LIST_API, {'user_id': self.user1.id})
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.data['tweets']), 3)
+        self.assertEqual(len(response.data['results']), 3)
         response = self.anonymous_client.get(TWEET_LIST_API, {'user_id': self.user2.id})
-        self.assertEqual(len(response.data['tweets']), 2)
+        self.assertEqual(len(response.data['results']), 2)
         # 检测排序是按照新创建的在前面的顺序来的
-        self.assertEqual(response.data['tweets'][0]['id'], self.tweets2[1].id)
-        self.assertEqual(response.data['tweets'][1]['id'], self.tweets2[0].id)
+        self.assertEqual(response.data['results'][0]['id'], self.tweets2[1].id)
+        self.assertEqual(response.data['results'][1]['id'], self.tweets2[0].id)
 
     def test_create_api(self):
         # 必须登录
