@@ -5,7 +5,7 @@ from academicworld.models import University, FacultyKeyword, Faculty, Publicatio
 from .serializers import UniversitySerializer, KeywordRankSerializer, FacultySerializer, PublicationSerializer
 from django.db.models import Avg, Sum, Count
 from academicworld.constants import get_score_quantile, CLUSTERMAP
-
+from utils.db_handler import get_top10_faculty
 
 class UniversityViewSet(viewsets.ModelViewSet):
     serializer_class = UniversitySerializer
@@ -19,10 +19,9 @@ class UniversityViewSet(viewsets.ModelViewSet):
 
     @action(methods=['GET'], detail=False)
     def all_universities(self, request):
-        queryset = self.get_queryset()
-        serializer = self.get_serializer(queryset, many=True)
+        universities = University.objects.values_list('name', flat=True)
 
-        return Response(serializer.data)
+        return Response({'universities': universities, 'success': True})
 
 class FacultyViewSet(viewsets.ModelViewSet):
     queryset = FacultyKeyword.objects.values('keyword__name').annotate(total_score=Sum('score')).order_by('-total_score')
@@ -99,18 +98,10 @@ class KeywordViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
         return Response({"error": "No keywords provided"}, status=400)
 
+class MangoViewSet(viewsets.ModelViewSet):
 
-class TopEntitiesViewSet(viewsets.ModelViewSet):
-    serializer_class = FacultySerializer
-
-    @action(methods=['GET'], detail=False)
-    def top_faculty(self, request):
-        queryset = Faculty.objects.annotate(total_score=Sum('facultykeyword__score')).order_by('-total_score')[:10]
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
-
-    @action(methods=['GET'], detail=False)
-    def top_publication(self, request):
-        queryset = Publication.objects.annotate(total_score=Sum('publicationkeyword__score')).order_by('-total_score')[:10]
-        serializer = PublicationSerializer(queryset, many=True)
-        return Response(serializer.data)
+    @action(methods=['POST'], detail=False, url_path='get-top10-faculty-university')
+    def keyword_faculty_university_krc(self, request):
+        university, keyword = request.data['University'], request.data['Keyword']
+        data = get_top10_faculty(university, keyword)
+        return Response({'data': data, 'success': True})

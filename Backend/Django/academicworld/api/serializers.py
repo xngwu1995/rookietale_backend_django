@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from academicworld.models import University, Faculty, Publication, Keyword
+from academicworld.models import University, Faculty, Publication
 
 class UniversitySerializer(serializers.ModelSerializer):
     avg_professor_score = serializers.FloatField()
@@ -7,6 +7,7 @@ class UniversitySerializer(serializers.ModelSerializer):
     class Meta:
         model = University
         fields = '__all__'
+
 
 class KeywordRankSerializer(serializers.Serializer):
     keyword__name = serializers.CharField()
