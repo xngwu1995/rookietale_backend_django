@@ -166,6 +166,20 @@ AWS_STORAGE_BUCKET_NAME = 'rookieno1avatar'
 AWS_S3_REGION_NAME = 'us-east-2'
 
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.memcached.PyMemcacheCache',
+        'LOCATION': '127.0.0.1:11211',
+        'TIMEOUT': 86400,
+    },
+    'testing': {
+        'BACKEND': 'django.core.cache.backends.memcached.PyMemcacheCache',
+        'LOCATION': '127.0.0.1:11211',
+        'TIMEOUT': 86400,
+        'KEY_PREFIX': 'testing',
+    },
+}
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.1/howto/static-files/
 

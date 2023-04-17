@@ -1,5 +1,8 @@
-from django.db import models
+from accounts.listeners import profile_changed
 from django.contrib.auth.models import User
+from django.db import models
+from django.db.models.signals import post_save, pre_delete
+from utils.listeners import invalidate_object_cache
 
 
 class UserProfile(models.Model):
@@ -24,13 +27,23 @@ class UserProfile(models.Model):
 # 这种写法实际上是一个利用 Python 的灵活性进行 hack 的方法，这样会方便我们通过 user 快速
 # 访问到对应的 profile 信息。
 def get_profile(user):
+    from accounts.services import UserService
+
     if hasattr(user, '_cached_user_profile'):
         return getattr(user, '_cached_user_profile')
-    profile, _ = UserProfile.objects.get_or_create(user=user)
-    # use setattr to cache the profile
+    profile = UserService.get_profile_through_cache(user.id)
+    # 使用 user 对象的属性进行缓存(cache)，避免多次调用同一个 user 的 profile 时
+    # 重复的对数据库进行查询
     setattr(user, '_cached_user_profile', profile)
     return profile
 
 
 # Add a property in django default User model
 User.profile = property(get_profile)
+
+# hook up with listeners to invalidate cache
+pre_delete.connect(invalidate_object_cache, sender=User)
+post_save.connect(invalidate_object_cache, sender=User)
+
+pre_delete.connect(profile_changed, sender=UserProfile)
+post_save.connect(profile_changed, sender=UserProfile)
