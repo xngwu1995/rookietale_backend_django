@@ -39,7 +39,7 @@ router.register(r'api/profiles', UserProfileViewSet, basename='profiles')
 router.register(r'api/universities', UniversityViewSet, basename='university')
 router.register(r'api/faculty', FacultyViewSet, basename='faculty-keyword')
 router.register(r'api/keywords', KeywordViewSet, basename='keyword')
-router.register(r'api/top-entities', TopEntitiesViewSet, basename='top-entities')
+router.register(r'api/mangodb', MangoViewSet, basename='mangodb')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
