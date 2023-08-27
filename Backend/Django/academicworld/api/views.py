@@ -5,7 +5,7 @@ from academicworld.models import University, FacultyKeyword, Faculty, Publicatio
 from .serializers import UniversitySerializer, KeywordRankSerializer, FacultySerializer, PublicationSerializer
 from django.db.models import Avg, Sum, Count
 from academicworld.constants import get_score_quantile, CLUSTERMAP
-from utils.db_handler import get_top10_faculty
+from utils.db_handler import get_top10_faculty, get_recommend_faculty
 
 class UniversityViewSet(viewsets.ModelViewSet):
     serializer_class = UniversitySerializer
@@ -30,6 +30,16 @@ class FacultyViewSet(viewsets.ModelViewSet):
     @action(methods=['GET'], detail=False)
     def get_all_professors(self, request):
         professors = Faculty.objects.values_list('name', flat=True)
+        return Response({'professors': professors, 'success': True})
+
+    @action(methods=['GET'], detail=False)
+    def get_university_professors(self, request):
+        university_name = request.GET.get('university', None)
+        professors = Faculty.objects.prefetch_related(
+                'university'
+            ).filter(
+                university__name=university_name
+            ).values_list('name', flat=True)
         return Response({'professors': professors, 'success': True})
 
     @action(methods=['POST'], detail=False)
@@ -104,4 +114,12 @@ class MangoViewSet(viewsets.ModelViewSet):
     def keyword_faculty_university_krc(self, request):
         university, keyword = request.data['University'], request.data['Keyword']
         data = get_top10_faculty(university, keyword)
+        return Response({'data': data, 'success': True})
+
+class Neo4JViewSet(viewsets.ModelViewSet):
+
+    @action(methods=['POST'], detail=False, url_path='get-recommend-faculty')
+    def get_recommend_faculty(self, request):
+        university, professor, target_school = request.data['University'], request.data['Professor'], request.data['TargetSchool']
+        data = get_recommend_faculty(university, professor, target_school)
         return Response({'data': data, 'success': True})

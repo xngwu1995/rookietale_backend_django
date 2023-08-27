@@ -12,16 +12,16 @@ class UserSerializer(serializers.ModelSerializer):
 
 class UserSerializerWithProfile(UserSerializer):
     nickname = serializers.CharField(source='profile.nickname')
-    avatar_url = serializers.SerializerMethodField()
+    avatar = serializers.SerializerMethodField()
 
-    def get_avatar_url(self, obj):
+    def get_avatar(self, obj):
         if obj.profile.avatar:
             return obj.profile.avatar.url
         return None
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'nickname', 'avatar_url')
+        fields = ('id', 'username', 'nickname', 'avatar')
 
 
 class UserSerializerForTweet(UserSerializerWithProfile):

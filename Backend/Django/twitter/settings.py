@@ -21,14 +21,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.1/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'nm)p29worx_7@q2o%=!4g6px(o=fil1ydq37!)c#e+_nlp_29m'
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = ["127.0.0.1", '192.168.33.10', 'localhost', '172.17.0.1', "10.0.0.26", "0.0.0.0"]
-INTERNAL_IPS = ["127.0.0.1", '192.168.33.10', 'localhost', '172.17.0.1', "10.0.0.26", "0.0.0.0"]
 
 # Application definition
 
@@ -47,6 +39,7 @@ INSTALLED_APPS = [
     "debug_toolbar",
     'django_filters',
     'notifications',
+    'corsheaders',
 
     # project apps
     'academicworld',
@@ -70,6 +63,7 @@ REST_FRAMEWORK = {
 }
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -79,6 +73,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     "debug_toolbar.middleware.DebugToolbarMiddleware",
 ]
+
 
 ROOT_URLCONF = 'twitter.urls'
 
@@ -100,20 +95,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'twitter.wsgi.application'
 
-
-# Database
-# https://docs.djangoproject.com/en/3.1/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'twitter',
-        'HOST': '0.0.0.0',
-        'PORT': '3306',
-        'USER': 'dbadmin',
-        'PASSWORD': 'wert66',
-    }
-}
 
 
 # Password validation
@@ -155,30 +136,9 @@ try:
 except:
     pass
 
-# 设置存储用户上传文件的 storage 用什么系统
-DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 TESTING = ((" ".join(sys.argv)).find('manage.py test') != -1)
 if TESTING:
     DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
-
-
-AWS_STORAGE_BUCKET_NAME = 'rookieno1avatar'
-AWS_S3_REGION_NAME = 'us-east-2'
-
-
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.memcached.PyMemcacheCache',
-        'LOCATION': '127.0.0.1:11211',
-        'TIMEOUT': 86400,
-    },
-    'testing': {
-        'BACKEND': 'django.core.cache.backends.memcached.PyMemcacheCache',
-        'LOCATION': '127.0.0.1:11211',
-        'TIMEOUT': 86400,
-        'KEY_PREFIX': 'testing',
-    },
-}
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.1/howto/static-files/

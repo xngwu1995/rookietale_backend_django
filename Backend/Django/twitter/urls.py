@@ -40,6 +40,7 @@ router.register(r'api/universities', UniversityViewSet, basename='university')
 router.register(r'api/faculty', FacultyViewSet, basename='faculty-keyword')
 router.register(r'api/keywords', KeywordViewSet, basename='keyword')
 router.register(r'api/mangodb', MangoViewSet, basename='mangodb')
+router.register(r'api/neo4j', Neo4JViewSet, basename='neo4j')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
