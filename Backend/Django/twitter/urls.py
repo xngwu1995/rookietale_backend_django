@@ -17,6 +17,7 @@ from django.contrib import admin
 from django.urls import include, path
 from rest_framework import routers
 from accounts.api.views import UserProfileViewSet, UserViewSet, AccountViewSet
+from chatgpt.api.views import ChatgptViewSet
 from inbox.api.views import NotificationViewSet
 from tweets.api.views import TweetViewSet
 from friendships.api.views import FriendshipViewSet
@@ -41,6 +42,8 @@ router.register(r'api/faculty', FacultyViewSet, basename='faculty-keyword')
 router.register(r'api/keywords', KeywordViewSet, basename='keyword')
 router.register(r'api/mangodb', MangoViewSet, basename='mangodb')
 router.register(r'api/neo4j', Neo4JViewSet, basename='neo4j')
+router.register(r'api/chatgpt', ChatgptViewSet, basename='chatgpt')
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
