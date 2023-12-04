@@ -22,12 +22,23 @@ class ChatGPTApi:
             self.logger.error(f"Error in get_response_from_gpt: {e}")
             return None
 
-    def format_prompt(self, requirements, content):
-        """Combines different text inputs into a formatted prompt."""
-        return f"{requirements}\n\n{content}"
+    def format_prompt(self, requirements, content, wordlimits, language):
+        """
+        Combines different text inputs into a formatted prompt.
+        Adds language-specific word limit requirements to the prompt.
+        """
+        # Append the language-specific word limit requirements
+        if language == "chinese":
+            formatted_requirements = f"{requirements} 请在回答中确保内容不超过{wordlimits}个字。"
+        elif language == "english":
+            formatted_requirements = f"{requirements} The word count must not exceed {wordlimits}."
+        else:
+            formatted_requirements = requirements  # Fallback if language is not specified
+        # Combine the formatted requirements with the content
+        return f"{formatted_requirements}\n\n{content}"
 
-    def process_text_and_get_response(self, requirements, content):
+    def process_text_and_get_response(self, requirements, content, wordlimits, language):
         """Processes the given text and returns the GPT-3 response."""
-        formatted_prompt = self.format_prompt(requirements, content)
+        formatted_prompt = self.format_prompt(requirements, content, wordlimits, language)
         return self.get_response_from_gpt(formatted_prompt)
 
