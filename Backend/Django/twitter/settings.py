@@ -42,7 +42,6 @@ INSTALLED_APPS = [
     'corsheaders',
 
     # project apps
-    'academicworld',
     'accounts',
     'chatgpt',
     'tweets',
