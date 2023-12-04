@@ -24,7 +24,6 @@ from friendships.api.views import FriendshipViewSet
 from newsfeeds.api.views import NewsFeedViewSet
 from comments.api.views import CommentViewSet
 from likes.api.views import LikeViewSet
-from academicworld.api.views import *
 import debug_toolbar
 
 router = routers.DefaultRouter()
@@ -37,11 +36,6 @@ router.register(r'api/comments', CommentViewSet, basename = 'comments')
 router.register(r'api/likes', LikeViewSet, basename = 'likes')
 router.register(r'api/notifications', NotificationViewSet, basename = 'notifications')
 router.register(r'api/profiles', UserProfileViewSet, basename='profiles')
-router.register(r'api/universities', UniversityViewSet, basename='university')
-router.register(r'api/faculty', FacultyViewSet, basename='faculty-keyword')
-router.register(r'api/keywords', KeywordViewSet, basename='keyword')
-router.register(r'api/mangodb', MangoViewSet, basename='mangodb')
-router.register(r'api/neo4j', Neo4JViewSet, basename='neo4j')
 router.register(r'api/chatgpt', ChatgptViewSet, basename='chatgpt')
 
 
