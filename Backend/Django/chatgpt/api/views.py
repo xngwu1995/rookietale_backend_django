@@ -14,9 +14,14 @@ class ChatgptViewSet(viewsets.ViewSet):
         # Extract user's requirements and content from the request
         requirements = request.data.get('requirements')
         content = request.data.get('content')
+        wordlimits = int(request.data.get('wordLimit'))
+        language = request.data.get('languageSelect')
         if not request.user:
             return None
         user = request.user
+
+        if language == "chinese":
+            wordlimits //= 4
 
         # Validate inputs
         if not requirements or not content:
@@ -27,7 +32,8 @@ class ChatgptViewSet(viewsets.ViewSet):
         chatgpt_api = ChatGPTApi()
 
         # Get the response from ChatGPT
-        response_text = chatgpt_api.process_text_and_get_response(requirements, content)
+        response_text = chatgpt_api.process_text_and_get_response(
+            requirements, content, wordlimits, language)
         response_time = timezone.now()
 
         # Create a record in the ChatGPTInteraction model
