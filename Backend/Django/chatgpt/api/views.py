@@ -1,6 +1,7 @@
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from rest_framework import permissions
 from chatgpt.models import ChatGPTInteraction
 from chatgpt.api.serializers import ChatGPTInteractionSerializer
 from chatgpt.utils import ChatGPTApi
@@ -8,6 +9,7 @@ from django.utils import timezone
 
 
 class ChatgptViewSet(viewsets.ViewSet):
+    permission_classes = (permissions.IsAuthenticated,)
 
     @action(methods=['POST'], detail=False)
     def ask_chatgpt(self, request):
@@ -16,12 +18,14 @@ class ChatgptViewSet(viewsets.ViewSet):
         content = request.data.get('content')
         wordlimits = int(request.data.get('wordLimit'))
         language = request.data.get('languageSelect')
+        outlines = request.data.get('outlines')
+
         if not request.user:
             return None
         user = request.user
 
         if language == "chinese":
-            wordlimits //= 4
+            wordlimits //= 1
 
         # Validate inputs
         if not requirements or not content:
@@ -33,7 +37,7 @@ class ChatgptViewSet(viewsets.ViewSet):
 
         # Get the response from ChatGPT
         response_text = chatgpt_api.process_text_and_get_response(
-            requirements, content, wordlimits, language)
+            requirements, content, wordlimits, language, outlines)
         response_time = timezone.now()
 
         # Create a record in the ChatGPTInteraction model

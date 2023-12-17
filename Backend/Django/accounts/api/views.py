@@ -17,6 +17,7 @@ from django.contrib.auth import (
     login as django_login,
 )
 from rest_framework.permissions import AllowAny
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import UserProfile
 from utils.permissions import IsObjectOwner
@@ -88,10 +89,11 @@ class AccountViewSet(viewsets.ViewSet):
                 'message': 'Username and password does not match.',
             }, status=400)
         # login
-        django_login(request, user)
+        refresh = RefreshToken.for_user(user)
         return Response({
             "success": True,
             "user": UserSerializer(instance=user).data,
+            "access": str(refresh.access_token),
         })
 
     @action(methods=['Post'], detail=False)
