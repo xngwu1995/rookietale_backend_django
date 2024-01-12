@@ -29,3 +29,7 @@
 ## likes API introduction:
   1. create a like for a tweet or comment: /api/likes/
   2. cancel a like: /api/likes/cancel/
+
+# How to activate venv in ec2 instance
+  1. source /var/app/venv/staging-*/bin/activate
+  2. cd /var/app/current/
