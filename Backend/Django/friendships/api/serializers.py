@@ -1,4 +1,5 @@
 from accounts.api.serializers import UserSerializerForFriendship
+from django.contrib.auth.models import User
 from friendships.models import Friendship
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -19,6 +20,12 @@ class FollowingUserIdSetMixin:
         setattr(self, '_cached_following_user_id_set', user_id_set)
         return user_id_set
     
+
+class MutualUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('id', 'username')
+
 
 class FriendshipSerializerForCreate(serializers.ModelSerializer):
     from_user_id = serializers.IntegerField()
@@ -45,7 +52,8 @@ class FriendshipSerializerForCreate(serializers.ModelSerializer):
 
 
 class FollowerSerializer(serializers.ModelSerializer, FollowingUserIdSetMixin):
-    user = UserSerializerForFriendship(source='cached_from_user')
+    # user = UserSerializerForFriendship(source='cached_from_user')
+    user = UserSerializerForFriendship(source='from_user')
     created_at = serializers.DateTimeField()
     has_followed = serializers.SerializerMethodField()
 
@@ -57,7 +65,8 @@ class FollowerSerializer(serializers.ModelSerializer, FollowingUserIdSetMixin):
         return obj.from_user_id in self.following_user_id_set
 
 class FollowingSerializer(serializers.ModelSerializer, FollowingUserIdSetMixin):
-    user = UserSerializerForFriendship(source='cached_to_user')
+    # user = UserSerializerForFriendship(source='cached_to_user')
+    user = UserSerializerForFriendship(source='to_user')
     created_at = serializers.DateTimeField()
     has_followed = serializers.SerializerMethodField()
 

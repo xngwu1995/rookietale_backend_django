@@ -2,6 +2,7 @@ from django.contrib.auth.models import User
 from rest_framework import serializers, exceptions
 
 from accounts.models import UserProfile
+from friendships.models import Friendship
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -13,15 +14,21 @@ class UserSerializer(serializers.ModelSerializer):
 class UserSerializerWithProfile(UserSerializer):
     nickname = serializers.CharField(source='profile.nickname')
     avatar = serializers.SerializerMethodField()
+    is_following = serializers.SerializerMethodField()
 
     def get_avatar(self, obj):
         if obj.profile.avatar:
             return obj.profile.avatar.url
         return None
 
+    def get_is_following(self, obj):
+        request = self.context.get('request')
+        if request and hasattr(request, 'user'):
+            return Friendship.objects.filter(from_user=request.user, to_user=obj).exists()
+        return False
     class Meta:
         model = User
-        fields = ('id', 'username', 'nickname', 'avatar')
+        fields = ('id', 'username', 'nickname', 'avatar', 'is_following')
 
 
 class UserSerializerForTweet(UserSerializerWithProfile):

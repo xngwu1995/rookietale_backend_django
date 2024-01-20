@@ -94,6 +94,7 @@ class AccountViewSet(viewsets.ViewSet):
             "success": True,
             "user": UserSerializer(instance=user).data,
             "access": str(refresh.access_token),
+            "refresh": str(refresh),
         })
 
     @action(methods=['Post'], detail=False)

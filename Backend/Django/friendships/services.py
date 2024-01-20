@@ -1,5 +1,7 @@
 from django.conf import settings
 from django.core.cache import caches
+from django.contrib.auth.models import User
+from django.db.models import Subquery, Q
 from friendships.models import Friendship
 from twitter.cache import FOLLOWINGS_PATTERN
 
@@ -63,3 +65,30 @@ class FriendshipService(object):
     def invalidate_following_cache(cls, from_user_id):
         key = FOLLOWINGS_PATTERN.format(user_id=from_user_id)
         cache.delete(key)
+
+    @classmethod
+    def has_following(cls, from_user_id, to_user_id):
+        return Friendship.objects.filter(
+            from_user_id=to_user_id,
+            to_user_id=from_user_id,
+        ).exists()
+
+    @classmethod
+    def get_mutual_followers(cls, user_id):
+        # Users that user_a follows
+        following_ids = Friendship.objects.filter(
+            from_user=user_id
+        ).values_list('to_user_id', flat=True)
+
+        # Users that follow user_a
+        follower_ids = Friendship.objects.filter(
+            to_user=user_id
+        ).values_list('from_user_id', flat=True)
+
+        # Mutual follows: Users followed by user_a that also follow user_a
+        mutual_follows = User.objects.filter(
+            Q(id__in=Subquery(following_ids)) &
+            Q(id__in=Subquery(follower_ids))
+        )
+
+        return mutual_follows
