@@ -3,10 +3,12 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from friendships.models import Friendship
+from friendships.services import FriendshipService
 from friendships.api.serializers import (
     FollowingSerializer,
     FollowerSerializer,
     FriendshipSerializerForCreate,
+    MutualUserSerializer,
 )
 from django.contrib.auth.models import User
 from utils.paginations import FriendshipPagination
@@ -22,14 +24,14 @@ class FriendshipViewSet(viewsets.GenericViewSet):
     # define my own pagination
     pagination_class = FriendshipPagination
 
-    @action(methods=['GET'], detail=True, permission_classes=[AllowAny])
+    @action(methods=['GET'], detail=True, permission_classes=[IsAuthenticated])
     def followers(self, request, pk):
         friendship = Friendship.objects.filter(to_user_id=pk).order_by('-created_at')
         page = self.paginate_queryset(friendship)
         serializer = FollowerSerializer(page, many=True, context={'request': request})
         return self.get_paginated_response(serializer.data)
 
-    @action(methods=['GET'], detail=True, permission_classes=[AllowAny])
+    @action(methods=['GET'], detail=True, permission_classes=[IsAuthenticated])
     def followings(self, request, pk):
         # GET /api/friendships/1/followers
         friendship = Friendship.objects.filter(from_user_id=pk).order_by('-created_at')
@@ -83,3 +85,9 @@ class FriendshipViewSet(viewsets.GenericViewSet):
 
     def list(self, request):
         return Response({'message': 'this is friendships'})
+    
+    @action(methods=['GET'], detail=True, permission_classes=[IsAuthenticated])
+    def get_allowed_user(self, request, pk):
+        mutual_followers = FriendshipService.get_mutual_followers(user_id=pk)
+        serializer = MutualUserSerializer(mutual_followers, many=True, context={'request': request})
+        return Response(serializer.data)

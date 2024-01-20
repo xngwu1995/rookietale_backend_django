@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'newsfeeds',
     'comments',
     'likes',
+    'taskmanager',
 ]
 
 REST_FRAMEWORK = {
@@ -99,7 +100,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'twitter.wsgi.application'
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=2),
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=24),
     # You can configure other settings here as needed
 }
 

@@ -19,11 +19,13 @@ from rest_framework import routers
 from accounts.api.views import UserProfileViewSet, UserViewSet, AccountViewSet
 from chatgpt.api.views import ChatgptViewSet
 from inbox.api.views import NotificationViewSet
+from taskmanager.api.views import TaskmanagerViewSet
 from tweets.api.views import TweetViewSet
 from friendships.api.views import FriendshipViewSet
 from newsfeeds.api.views import NewsFeedViewSet
 from comments.api.views import CommentViewSet
 from likes.api.views import LikeViewSet
+from rest_framework_simplejwt.views import TokenRefreshView
 import debug_toolbar
 
 router = routers.DefaultRouter()
@@ -37,6 +39,7 @@ router.register(r'api/likes', LikeViewSet, basename = 'likes')
 router.register(r'api/notifications', NotificationViewSet, basename = 'notifications')
 router.register(r'api/profiles', UserProfileViewSet, basename='profiles')
 router.register(r'api/chatgpt', ChatgptViewSet, basename='chatgpt')
+router.register(r'api/taskmanager', TaskmanagerViewSet, basename='taskmanager')
 
 
 urlpatterns = [
@@ -44,4 +47,5 @@ urlpatterns = [
     path('', include(router.urls)),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     path('__debug__/', include(debug_toolbar.urls)),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ]
