@@ -41,6 +41,8 @@ class FriendshipService(object):
     
     @classmethod
     def has_followed(cls, from_user, to_user):
+        if from_user == to_user:
+            return True
         return Friendship.objects.filter(
             from_user=from_user,
             to_user=to_user,
@@ -68,6 +70,8 @@ class FriendshipService(object):
 
     @classmethod
     def has_following(cls, from_user_id, to_user_id):
+        if from_user_id == to_user_id:
+            return True
         return Friendship.objects.filter(
             from_user_id=to_user_id,
             to_user_id=from_user_id,
@@ -87,8 +91,8 @@ class FriendshipService(object):
 
         # Mutual follows: Users followed by user_a that also follow user_a
         mutual_follows = User.objects.filter(
-            Q(id__in=Subquery(following_ids)) &
-            Q(id__in=Subquery(follower_ids))
+            (Q(id__in=Subquery(following_ids)) & Q(id__in=Subquery(follower_ids))) |
+            Q(id=user_id)
         )
 
         return mutual_follows

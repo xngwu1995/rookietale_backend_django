@@ -16,6 +16,7 @@ class UserProfile(models.Model):
     nickname = models.CharField(null=True, max_length=200)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    expo_push_token = models.CharField(max_length=200, null=True, blank=True)
 
     def __str__(self):
         return '{} {}'.format(self.user, self.nickname)

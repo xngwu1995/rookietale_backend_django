@@ -1,6 +1,6 @@
 import random
 from django.contrib.auth.models import User
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 from rest_framework import permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -10,6 +10,7 @@ from accounts.api.serializers import (
     LoginSerializer,
     SignupSerializer,
     UserSerializerWithProfile,
+    UserProfileSerializerForPushTokenUpdate,
 )
 from django.contrib.auth import (
     logout as django_logout,
@@ -121,3 +122,15 @@ class UserProfileViewSet(
     queryset = UserProfile
     permission_classes = (IsObjectOwner,)
     serializer_class = UserProfileSerializerForUpdate
+
+    @action(methods=['PUT'], detail=True)
+    def edit_user_token(self, request, pk=None):
+        try:
+            user_profile = UserProfile.objects.get(user_id=pk)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = UserProfileSerializerForPushTokenUpdate(user_profile, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

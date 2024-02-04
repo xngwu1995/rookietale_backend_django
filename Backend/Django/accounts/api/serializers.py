@@ -6,9 +6,10 @@ from friendships.models import Friendship
 
 
 class UserSerializer(serializers.ModelSerializer):
+    expo_push_token = serializers.CharField(source='profile.expo_push_token')
     class Meta:
         model = User
-        fields = ['id', 'username']
+        fields = ['id', 'username','expo_push_token']
 
 
 class UserSerializerWithProfile(UserSerializer):
@@ -108,3 +109,16 @@ class UserProfileSerializerForUpdate(serializers.ModelSerializer):
     class Meta:
         model = UserProfile
         fields = ('nickname', 'avatar')
+
+
+class UserProfileSerializerForPushTokenUpdate(serializers.ModelSerializer):
+
+    class Meta:
+        model = UserProfile
+        fields = ('expo_push_token',)
+
+    def update(self, obj, validated_data):
+        # Again, ensure the field name is consistent
+        obj.expo_push_token = validated_data.get('expo_push_token', obj.expo_push_token)
+        obj.save()
+        return obj
