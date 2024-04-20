@@ -26,6 +26,7 @@ from newsfeeds.api.views import NewsFeedViewSet
 from comments.api.views import CommentViewSet
 from likes.api.views import LikeViewSet
 from rest_framework_simplejwt.views import TokenRefreshView
+from jacknews.api.views import JacknewsViewSet
 import debug_toolbar
 
 router = routers.DefaultRouter()
@@ -40,6 +41,7 @@ router.register(r'api/notifications', NotificationViewSet, basename = 'notificat
 router.register(r'api/profiles', UserProfileViewSet, basename='profiles')
 router.register(r'api/chatgpt', ChatgptViewSet, basename='chatgpt')
 router.register(r'api/taskmanager', TaskmanagerViewSet, basename='taskmanager')
+router.register(r'api/jacknews', JacknewsViewSet, basename='jacknews')
 
 
 urlpatterns = [

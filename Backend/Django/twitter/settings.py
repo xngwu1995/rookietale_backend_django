@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django_filters',
     'notifications',
     'corsheaders',
+    'ebhealthcheck.apps.EBHealthCheckConfig',
 
     # project apps
     'accounts',
@@ -50,6 +51,7 @@ INSTALLED_APPS = [
     'comments',
     'likes',
     'taskmanager',
+    'jacknews',
 ]
 
 REST_FRAMEWORK = {
