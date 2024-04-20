@@ -18,7 +18,7 @@ class ChatgptViewSet(viewsets.ViewSet):
         content = request.data.get('content')
         wordlimits = int(request.data.get('wordLimit'))
         language = request.data.get('languageSelect')
-        outlines = request.data.get('outlines')
+        islong = request.data.get('islong')
 
         if not request.user:
             return None
@@ -35,9 +35,13 @@ class ChatgptViewSet(viewsets.ViewSet):
         # Initialize the ChatGPT API class
         chatgpt_api = ChatGPTApi()
 
-        # Get the response from ChatGPT
-        response_text = chatgpt_api.process_text_and_get_response(
-            requirements, content, wordlimits, language, outlines)
+        # # Get the response from ChatGPT
+        if islong == 'true':
+            response_text = chatgpt_api.write_long_essay(
+                requirements, content, wordlimits)
+        else:
+            response_text = chatgpt_api.process_text_and_get_response(
+                requirements, content, wordlimits, language)
         response_time = timezone.now()
 
         # Create a record in the ChatGPTInteraction model
