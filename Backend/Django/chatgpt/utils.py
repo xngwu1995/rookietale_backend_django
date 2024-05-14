@@ -5,7 +5,7 @@ import logging
 
 class ChatGPTApi:
 
-    def __init__(self, model="gpt-3.5-turbo-0125"):
+    def __init__(self, model="gpt-4o"):
         self.openai_api_key = settings.CHAT_GPT_API_KEY
         openai.api_key = self.openai_api_key
         self.model_name = model
@@ -82,3 +82,22 @@ class ChatGPTApi:
 
     def format_outlines(self, outlines):
         return list(outlines.values())
+
+    def stock_analysis(self, data, stock_symbol, news):
+        stock_news = news.get('stock_news')
+        world_news = news.get('world_news')
+        stock_news = "下一条新闻".join(stock_news)
+        world_news = "下一条新闻".join(world_news)
+        prompt = (
+            f"以下是{stock_symbol}公司的相关信息"
+            f"以下是最近几天的数据：{data}。"
+            f"数据中四种信号的说明如下："
+            f"Signal_0：根据SMA_7与SMA_25相对位置及价格相对于EMA_200的关系，生成看涨或看跌信号。"
+            f"Signal_1：根据调整后的收盘价与布林带的关系及RSI值，识别极端的超买或超卖条件。"
+            f"Signal_2：基于MACD信号线与价格相对于EMA_200的位置，判断市场动能的强弱。"
+            f"Signal_3：综合三种Supertrend指标与价格相对于EMA_200的位置，判断市场趋势的强度。"
+            f"以下是最近五天的几条和{stock_symbol}相关的新闻:{news}"
+            f"以下是最近全国性的新闻消息{world_news}"
+            f"基于以上信息，请您作为一位顶尖的股票交易员，结合全球大事，考虑美联储的计划，做出这只股票的一周，一个月和一个季度的详细的交易计划，并且给出很精确的买出或者卖出价格，因为你是一个最顶尖的股票交易员，而避免模糊不清的交易计划。感谢您的帮助！"
+        )
+        return self.get_response_from_gpt(prompt)
