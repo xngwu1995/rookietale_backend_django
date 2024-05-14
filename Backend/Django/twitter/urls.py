@@ -43,7 +43,6 @@ router.register(r'api/chatgpt', ChatgptViewSet, basename='chatgpt')
 router.register(r'api/taskmanager', TaskmanagerViewSet, basename='taskmanager')
 router.register(r'api/jacknews', JacknewsViewSet, basename='jacknews')
 
-
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include(router.urls)),
