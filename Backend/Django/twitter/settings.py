@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'likes',
     'taskmanager',
     'jacknews',
+    'LMT',
 ]
 
 REST_FRAMEWORK = {
