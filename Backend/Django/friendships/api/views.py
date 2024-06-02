@@ -11,6 +11,7 @@ from friendships.api.serializers import (
     MutualUserSerializer,
 )
 from django.contrib.auth.models import User
+from django.db.models import Q
 from utils.paginations import FriendshipPagination
 
 
@@ -26,7 +27,9 @@ class FriendshipViewSet(viewsets.GenericViewSet):
 
     @action(methods=['GET'], detail=True, permission_classes=[IsAuthenticated])
     def followers(self, request, pk):
-        friendship = Friendship.objects.filter(to_user_id=pk).order_by('-created_at')
+        friendship = Friendship.objects.filter(
+            Q(to_user_id=pk) & ~Q(from_user__isnull=True)
+        ).order_by('-created_at')
         page = self.paginate_queryset(friendship)
         serializer = FollowerSerializer(page, many=True, context={'request': request})
         return self.get_paginated_response(serializer.data)
@@ -34,7 +37,9 @@ class FriendshipViewSet(viewsets.GenericViewSet):
     @action(methods=['GET'], detail=True, permission_classes=[IsAuthenticated])
     def followings(self, request, pk):
         # GET /api/friendships/1/followers
-        friendship = Friendship.objects.filter(from_user_id=pk).order_by('-created_at')
+        friendship = Friendship.objects.filter(
+            Q(from_user_id=pk) & ~Q(to_user__isnull=True)
+        ).order_by('-created_at')
         page = self.paginate_queryset(friendship)
         serializer = FollowingSerializer(page, many=True, context={'request': request})
         return self.get_paginated_response(serializer.data)
