@@ -5,8 +5,9 @@ from django.conf import settings
 from django.core.cache import cache
 from yahoo_fin import stock_info as si
 
+from LMT.models import Stock
 from chatgpt.utils import ChatGPTApi
-from jacknews.strategy import Strategy
+from utils.strategy import Strategy
 
 
 class StockSignal:
@@ -51,6 +52,8 @@ class StockSignal:
         end_date = datetime.datetime.now() + datetime.timedelta(days=1)
         start_date = datetime.datetime.now() - datetime.timedelta(days=300)
         df = si.get_data(stock_symbol, start_date=start_date, end_date=end_date)
+        
+        # Applying various strategies
         Strategy.macd(df)
         Strategy.rsi(df)
         Strategy.ema(df, periods=200)
@@ -63,11 +66,13 @@ class StockSignal:
         Strategy.supertrend(df, periods=11, multiplier=2)
         Strategy.supertrend(df, periods=10, multiplier=1)
         Strategy.bollinger_bands(df)
+        
+        # Making a copy and applying signal values
         df1 = df[202:].copy()  # Make a copy here
         df = self.apply_signal_val(df1)
         df = df.drop(['ticker'], axis=1)
-        news = self.get_stock_news(stock_symbol)
-        gpt_result = self.get_gpt_stock_analysis(df.to_string(), stock_symbol, news)
+        
+        # Calculating the signal value
         val = df.iloc[-1].Signal_0 + df.iloc[-1].Signal_1 + df.iloc[-1].Signal_2 + df.iloc[-1].Signal_3
         result = ''
         if val >= 2:
@@ -76,7 +81,17 @@ class StockSignal:
             result = 'Sell'
         else:
             result = 'Hold'
-        return gpt_result
+        
+        # Formatting the DataFrame
+        df.index.name = 'date'
+        df_json = df.reset_index()
+        df_json['date'] = df_json['date'].dt.strftime('%Y-%m-%d')
+        json_str = df_json.to_json(orient='records')
+        
+        # Getting the latest close price
+        latest_close_price = df.iloc[-1].close
+        
+        return json_str, result, latest_close_price
 
     def get_gpt_stock_analysis(self, data, stock_symbol, news):
         chatgpt_api = ChatGPTApi()
@@ -90,12 +105,29 @@ class StockSignal:
             # If cached result exists, return it
             return cached_result
         else:
-            # If not cached, compute the result and cache it with a timeout of one day
-            gpt_result = self.update_df_by_strategy(stock_symbol)
+            gpt_result = self.generate_new_stock(stock_symbol)
             # Cache the result with a timeout of one day
             cache.set(stock_symbol, gpt_result)
             
             return gpt_result
+
+    def generate_new_stock(self, stock_symbol):
+        df_val, rank, current_price = self.update_df_by_strategy(stock_symbol)
+        news = self.get_stock_news(stock_symbol)
+        # If not cached, compute the result and cache it with a timeout of one day
+        gpt_result = self.get_gpt_stock_analysis(df_val, stock_symbol, news)
+
+        stock, created = Stock.objects.update_or_create(
+            symbol=stock_symbol,
+            defaults={
+                'instructors': df_val,
+                'analysis': gpt_result,
+                'rank': rank,
+                'current_price': current_price,
+            }
+        )
+
+        return gpt_result
 
     def format_news(self, news_list):
         formated_news = []

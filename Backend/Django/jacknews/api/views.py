@@ -5,7 +5,7 @@ from rest_framework.decorators import action
 from jacknews.models import JackNews
 from jacknews.api.serializers import JackNewsSerializer, StockSignalSerializer
 
-from jacknews.utils import StockSignal
+from utils.stock_info import StockSignal
 
 
 class JacknewsViewSet(viewsets.ModelViewSet):
@@ -38,7 +38,7 @@ class JacknewsViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='stock-symbols')
     def stock_symbols(self, request):
         try:
-            with open('jacknews/stock_data.json', 'r') as file:
+            with open('utils/stock_data.json', 'r') as file:
                 stock_data = json.load(file)
             return Response(stock_data)
         except FileNotFoundError:
