@@ -73,7 +73,7 @@ class AccountViewSet(viewsets.ViewSet):
     @action(methods=['Post'], detail=False)
     def login(self, request):
         # get username and password from request
-        serializer = LoginSerializer(data = request.data)
+        serializer = LoginSerializer(data=request.data)
         if not serializer.is_valid():
             return Response({
                 "success": False,
@@ -83,7 +83,7 @@ class AccountViewSet(viewsets.ViewSet):
         username = serializer.validated_data['username']
         password = serializer.validated_data['password']
 
-        user = django_authenticate(username = username, password = password)
+        user = django_authenticate(username=username, password=password)
         if not user or user.is_anonymous:
             return Response({
                 'success': False,
@@ -114,6 +114,16 @@ class AccountViewSet(viewsets.ViewSet):
             "success": True,
             "user": UserSerializer(instance=user).data,
         }, status = 201)
+
+    @action(methods=['DELETE'], detail=False, permission_classes=[IsObjectOwner])
+    def delete(self, request):
+        try:
+            user = request.user
+            user.delete()
+            return Response({'success': True, 'message': 'Account deleted successfully'}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'success': False, 'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
 
 class UserProfileViewSet(
     viewsets.GenericViewSet,
