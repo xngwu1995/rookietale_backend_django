@@ -2,10 +2,7 @@ import datetime
 import finnhub
 import numpy as np
 from django.conf import settings
-from django.core.cache import cache
 from yahoo_fin import stock_info as si
-
-from LMT.models import Stock
 from chatgpt.utils import ChatGPTApi
 from utils.strategy import Strategy
 
@@ -88,46 +85,24 @@ class StockSignal:
         df_json['date'] = df_json['date'].dt.strftime('%Y-%m-%d')
         json_str = df_json.to_json(orient='records')
         
-        # Getting the latest close price
-        latest_close_price = df.iloc[-1].close
-        
-        return json_str, result, latest_close_price
+        return json_str, result
 
     def get_gpt_stock_analysis(self, data, stock_symbol, news):
         chatgpt_api = ChatGPTApi()
         return chatgpt_api.stock_analysis(data, stock_symbol, news)
 
+    def get_price(self, stock_symbol):
+        df_val, rank = self.update_df_by_strategy(stock_symbol)
+        latest_price = si.get_live_price(stock_symbol)
+        return df_val, rank, latest_price
+
     def get_signal(self, stock_symbol):
-        # Check if the result is already cached
-        cached_result = cache.get(stock_symbol)
-
-        if cached_result is not None:
-            # If cached result exists, return it
-            return cached_result
-        else:
-            gpt_result = self.generate_new_stock(stock_symbol)
-            # Cache the result with a timeout of one day
-            cache.set(stock_symbol, gpt_result)
-            
-            return gpt_result
-
-    def generate_new_stock(self, stock_symbol):
-        df_val, rank, current_price = self.update_df_by_strategy(stock_symbol)
+        df_val, rank, latest_price = self.get_price(stock_symbol)
         news = self.get_stock_news(stock_symbol)
         # If not cached, compute the result and cache it with a timeout of one day
         gpt_result = self.get_gpt_stock_analysis(df_val, stock_symbol, news)
 
-        stock, created = Stock.objects.update_or_create(
-            symbol=stock_symbol,
-            defaults={
-                'instructors': df_val,
-                'analysis': gpt_result,
-                'rank': rank,
-                'current_price': current_price,
-            }
-        )
-
-        return gpt_result
+        return gpt_result, df_val, rank, latest_price
 
     def format_news(self, news_list):
         formated_news = []

@@ -16,6 +16,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 from rest_framework import routers
+from LMT.api.views import LMTViewSet
 from accounts.api.views import UserProfileViewSet, UserViewSet, AccountViewSet
 from chatgpt.api.views import ChatgptViewSet
 from inbox.api.views import NotificationViewSet
@@ -42,6 +43,8 @@ router.register(r'api/profiles', UserProfileViewSet, basename='profiles')
 router.register(r'api/chatgpt', ChatgptViewSet, basename='chatgpt')
 router.register(r'api/taskmanager', TaskmanagerViewSet, basename='taskmanager')
 router.register(r'api/jacknews', JacknewsViewSet, basename='jacknews')
+router.register(r'api/LMT', LMTViewSet, basename='LMT')
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
