@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'taskmanager',
     'jacknews',
     'LMT',
+    'stocks',
 ]
 
 REST_FRAMEWORK = {
