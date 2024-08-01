@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'notifications',
     'corsheaders',
     'ebhealthcheck.apps.EBHealthCheckConfig',
+    'django_celery_beat',
 
     # project apps
     'accounts',
@@ -51,8 +52,6 @@ INSTALLED_APPS = [
     'comments',
     'likes',
     'taskmanager',
-    'jacknews',
-    'LMT',
     'stocks',
 ]
 
@@ -160,7 +159,3 @@ STATICFILE_DIRS = [os.path.join(BASE_DIR, "static"),]
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 MEDIA_ROOT = 'media/'
-
-
-
-
