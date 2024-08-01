@@ -1,5 +1,10 @@
 import ast
+import asyncio
+import aiohttp
 import openai
+import certifi
+import time
+import ssl
 from django.conf import settings
 import logging
 
@@ -101,3 +106,119 @@ class ChatGPTApi:
             f"基于以上信息，请您作为一位顶尖的股票交易员，结合全球大事，考虑美联储的计划，提供详细的股票分析报告，确保用户可以根据这份报告能做出正确的投资行为, 并且这份报告需要让读者知道止损区间，止损的百分比，获利止盈区间，获利止盈的百分比！"
         )
         return self.get_response_from_gpt(prompt)
+
+    async def get_gpt_result(self, stock_symbol, session):
+        prompt = f'''
+        Stock Analysis Request: {stock_symbol}
+        Objective:
+        Provide a detailed analysis of {stock_symbol} stock to assess its investment potential.
+        
+        Financial Performance Analysis:
+
+        Earnings Per Share (EPS):
+        Current EPS (TTM)
+        EPS growth rate for the last 3 years (CAGR)
+        EPS estimates for the next two fiscal years
+        Price-to-Earnings Ratio (P/E Ratio):
+        Current P/E ratio
+        Average P/E ratio for the semiconductor industry
+        {stock_symbol}'s 5-year average P/E ratio
+        Based on these values, is {stock_symbol} currently overvalued, undervalued, or fairly valued?
+        Price/Earnings-to-Growth Ratio (PEG Ratio):
+        Calculate PEG ratio using current P/E and estimated EPS growth rate.
+        Interpret the PEG ratio: Is the stock's growth outlook justified by its current valuation?
+        Dividend Yield:
+        Current dividend yield
+        Dividend payout ratio
+        Average dividend yield for the semiconductor industry
+        Assessment of dividend sustainability (consider company's free cash flow and earnings growth)
+        
+        Growth and Profitability Analysis:
+
+        Revenue Growth:
+        Quarterly and annual revenue growth rates for the last 2 years
+        Key factors driving revenue growth (e.g., product segments, market trends)
+        Future revenue growth projections (if available)
+        Profit Margins:
+        Gross profit margin, operating profit margin, and net profit margin for the last 3 years
+        Compare {stock_symbol}'s margins to industry averages
+        Analyze trends in profit margins (are they expanding or contracting?)
+        Return on Equity (ROE):
+        Calculate ROE for the last 3 years
+        Compare {stock_symbol}'s ROE to industry averages
+        Assess how effectively {stock_symbol} generates profit from shareholders' equity
+        
+        Financial Health and Risk Analysis:
+
+        Market Capitalization:
+        Current market capitalization
+        Classification (large-cap, mega-cap, etc.)
+        How does {stock_symbol}'s size affect its risk and growth potential?
+        Debt-to-Equity Ratio:
+        Current debt-to-equity ratio
+        Compare to industry averages
+        Evaluate {stock_symbol}'s financial leverage and debt burden
+        Free Cash Flow (FCF):
+        Free cash flow for the last 3 years
+        FCF trends over time
+        Potential uses of FCF (e.g., share buybacks, dividends, R&D)
+        
+        Qualitative Analysis:
+
+        Competitive Advantage:
+        Identify {stock_symbol}'s key competitive advantages (technology leadership, strong brand, etc.)
+        Assess the durability of these advantages (are they likely to persist?)
+        Management Quality:
+        Evaluate the experience and track record of the leadership team
+        Consider the effectiveness of their strategic decisions
+        Industry Analysis:
+        Provide an overview of the semiconductor industry
+        Discuss major trends and risks (e.g., supply chain disruptions, technological shifts)
+        Analyze {stock_symbol}'s competitive position within the industry
+        
+        Investment Recommendation:
+        Based on the above analysis, provide a clear recommendation:
+
+        Buy: If you believe {stock_symbol} is a strong investment, explain why, highlighting the key factors supporting your decision.
+        Hold: If you believe the stock is fairly valued or has balanced risks and rewards, justify your neutral stance.
+        Sell: If you believe the stock is overvalued or faces significant headwinds, present the reasons for selling.
+        
+        Additional Considerations:
+
+        Risk Profile: Assess the overall risk level of investing in {stock_symbol}.
+        Investment Horizon: Consider whether {stock_symbol} is more suitable for short-term, medium-term, or long-term investors.
+        Alternative Investments: Briefly discuss other semiconductor stocks or relevant investment opportunities.
+        
+        Data Sources:
+
+        Use reputable and current financial data sources (e.g., SEC filings, Yahoo Finance, financial news outlets). Ensure data is as of today's date.
+        Cite your sources for transparency and credibility.
+        '''
+        url = "https://api.openai.com/v1/chat/completions"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.openai_api_key}",
+        }
+        payload = {
+            "model": self.model_name,
+            "messages": [{'role': 'system', 'content': prompt}]
+        }
+        ssl_context = ssl.create_default_context(cafile=certifi.where())
+        try:
+            async with session.post(url, headers=headers, json=payload, ssl=ssl_context) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    return result['choices'][-1]['message']['content'] if result else None
+                else:
+                    self.logger.error(f"Error in get_response_from_gpt: {response.status}")
+                    return None
+        except Exception as e:
+            self.logger.error(f"Error in get_response_from_gpt: {e}")
+            return None
+    async def async_stocks_analysis(self, stock_symbols):
+        async with aiohttp.ClientSession() as session:
+            tasks = []
+            for stock_symbol in stock_symbols:
+                tasks.append(asyncio.ensure_future(self.get_gpt_result(stock_symbol, session)))
+            results = await asyncio.gather(*tasks)
+        return results

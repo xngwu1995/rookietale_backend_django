@@ -87,22 +87,19 @@ class StockSignal:
         
         return json_str, result
 
-    def get_gpt_stock_analysis(self, data, stock_symbol, news):
+    async def async_get_gpt_stocks_analysis(self, stock_symbol):
         chatgpt_api = ChatGPTApi()
-        return chatgpt_api.stock_analysis(data, stock_symbol, news)
+        return await chatgpt_api.async_stocks_analysis(stock_symbol)
 
     def get_price(self, stock_symbol):
         df_val, rank = self.update_df_by_strategy(stock_symbol)
-        latest_price = si.get_live_price(stock_symbol)
+        # latest_price = si.get_live_price(stock_symbol)
+        latest_price = 100
         return df_val, rank, latest_price
 
-    def get_signal(self, stock_symbol):
-        df_val, rank, latest_price = self.get_price(stock_symbol)
-        news = self.get_stock_news(stock_symbol)
-        # If not cached, compute the result and cache it with a timeout of one day
-        gpt_result = self.get_gpt_stock_analysis(df_val, stock_symbol, news)
-
-        return gpt_result, df_val, rank, latest_price
+    async def get_signal(self, stock_symbol):
+        gpt_result = await self.async_get_gpt_stocks_analysis(stock_symbol)
+        return gpt_result
 
     def format_news(self, news_list):
         formated_news = []

@@ -1,15 +1,15 @@
 import pandas as pd
 import numpy as np
-from yahoo_fin import stock_info as si
 import datetime
-import os
+import yfinance as yf
 from yahoo_fin import stock_info as si
 from pandas import DataFrame, Series
 from numpy import ndarray
 from utils.finviz.screener import Screener # type: ignore
 from scipy.signal import argrelextrema # type: ignore
 from typing import List, Tuple, Dict, Optional
-from stocks.models import Stock, StockHistoryData
+from stocks.models import Stock, StrategyData
+from django.core.cache import cache
 
 
 class Strategy:
@@ -150,7 +150,13 @@ class VCP_Strategy:
         self.ticker_list: List[str]
         self.rs_dict: Dict[str, int]
         self.df_spx: Dict[str, float]
-        self.ticker_list, self.rs_dict, self.df_spx = self.get_init_data()
+        self.today = datetime.datetime.today().date()
+        vcp_cache_key = f"vcp_{self.today}"
+        self.ticker_list, self.rs_dict, self.df_spx = cache.get(vcp_cache_key, (None, None, None))
+        if self.ticker_list is None:
+            self.ticker_list, self.rs_dict, self.df_spx = self.get_init_data()
+            cache.set(vcp_cache_key, (self.ticker_list, self.rs_dict, self.df_spx))
+
         self.radar: DataFrame = DataFrame({
             'Ticker': [],
             'Num_of_contraction': [],
@@ -161,31 +167,17 @@ class VCP_Strategy:
         })
 
     def get_init_data(self):
-        # Define file paths
-        ticker_csv = 'tickers.csv'
-        rs_csv = 'rs_ratings.csv'
-        spx_csv = 'spx_data.csv'
         filters = ['cap_smallover','sh_avgvol_o100','sh_price_o2','ta_sma200_sb50','ta_sma50_pa']
-        # Load data if CSV files exist, otherwise fetch and save the data
-        if os.path.exists(ticker_csv):
-            ticker_table = pd.read_csv(ticker_csv)
-            ticker_list = ticker_table['Ticker'].to_list()
-        else:
-            # Fetch and save ticker data
-            stock_list = Screener(filters=filters, table='Performance', order='asc', rows=960)
-            ticker_table = pd.DataFrame(stock_list.data)
-            ticker_list = ticker_table['Ticker'].to_list()
-            ticker_table.to_csv(ticker_csv, index=False)
 
-        if os.path.exists(rs_csv):
-            rs_table = pd.read_csv(rs_csv)
-            rs_list = rs_table['Ticker'].to_list()
-        else:
-            # Fetch and save RS data
-            performance_table = Screener(table='Performance', order='-perf52w', rows=3000)
-            rs_table = pd.DataFrame(performance_table.data)
-            rs_list = rs_table['Ticker'].to_list()
-            rs_table.to_csv(rs_csv, index=False)
+        # Fetch and save ticker data
+        stock_list = Screener(filters=filters, table='Performance', order='asc', rows=960)
+        ticker_table = pd.DataFrame(stock_list.data)
+        ticker_list = ticker_table['Ticker'].to_list()
+
+        # Fetch and save RS data
+        performance_table = Screener(table='Performance', order='-perf52w', rows=3000)
+        rs_table = pd.DataFrame(performance_table.data)
+        rs_list = rs_table['Ticker'].to_list()
 
         rs_dict = {value: index for index, value in enumerate(rs_list)}
         end_date = pd.to_datetime('today')
@@ -424,36 +416,47 @@ class VCP_Strategy:
         end_date = pd.to_datetime('today')
         start_date = end_date - pd.DateOffset(years=period)
 
-        # Query the Stock and StockHistoryData tables
-        stock = Stock.objects.get(ticker=stock_ticker)
-        history_data = StockHistoryData.objects.filter(
-            stock=stock,
-            date__range=[start_date, end_date]
-        ).values(
-            'date', 'open_val', 'high', 'low', 'close_val', 'adj_close_val', 'volume'
-        ).order_by('date')
+        stock = yf.Ticker(stock_ticker)
 
-        # Convert the queryset to a DataFrame
-        ticker_history = pd.DataFrame.from_records(history_data)
-        ticker_history.set_index('date', inplace=True)
-        ticker_history.index = pd.to_datetime(ticker_history.index)
+        # Create a cache key that includes the stock ticker and today's date
+        cache_key = f"{stock_ticker}_{self.today}"
+        data = cache.get(cache_key, None)
+        if not isinstance(data, pd.DataFrame):
+            data = si.get_data(stock_ticker, start_date=start_date, end_date=end_date)
+            # Get trailing P/E ratio
+            trailing_pe = stock.info.get('trailingPE', 0) # Handle missing values
 
-        # Rename columns to match the yfinance format
-        ticker_history.rename(columns={
-            'open_val': 'Open',
+            # Get EPS growth (example: 5-year growth rate)
+            eps_growth = stock.info.get('earningsQuarterlyGrowth', 0)  
+
+            # Add P/E and EPS growth to the DataFrame
+            data['trailingPE'] = trailing_pe
+            data['epsGrowth'] = eps_growth
+            cache.set(f"{cache_key}", data)
+
+        # Drop any rows with missing values
+        history_data = data.dropna()
+
+        # If the data is empty, return an empty DataFrame
+        if history_data.empty:
+            return pd.DataFrame()
+
+        # Rename columns to match the desired format
+        history_data.rename(columns={
+            'open': 'Open',
             'high': 'High',
             'low': 'Low',
-            'close_val': 'Close',
-            'adj_close_val': 'Adj Close',
+            'close': 'Close',
+            'adjclose': 'Adj Close',
             'volume': 'Volume'
         }, inplace=True)
-
-        return ticker_history
+        
+        return history_data
 
     def execute(self) -> None:
         for ticker_string in self.ticker_list:
             try:
-                ticker_history = self.get_ticker_history(stock_ticker=ticker_string, period=2) # Get the data of stocks
+                ticker_history = self.get_ticker_history(ticker_string) # Get the data of stocks
                 trend_template_screener = self.trend_template(ticker_history) # Determine whether the stocks is in Stage 2
                 if trend_template_screener['Pass'][-1] == 1 and trend_template_screener['Pass'][-2] == 1:
                     print(f'{ticker_string} is in Stage 2')
@@ -470,7 +473,17 @@ class VCP_Strategy:
                     print(f'{ticker_string} is not in Stage 2')
             except Exception as err:
                 print(f'Get Error {err}')
-        print('Finished!!!')
-        print(f'{len(self.radar)} stocks pass')
+        for index, row in self.radar.iterrows():
+            stock: Stock = Stock.objects.get(ticker=row['Ticker'])
+            StrategyData.objects.create(
+                stock=stock,
+                strategy='VCP',
+            )
 
-        print(self.radar)
+
+def get_upcoming_earning_date(stock_ticker):
+    stock = yf.Ticker(stock_ticker)
+    earnings_dates = stock.earnings_dates
+    today = pd.Timestamp('now').tz_localize('UTC')
+    upcoming_earnings_date = earnings_dates[earnings_dates.index > today].index.min()
+    return upcoming_earnings_date #Timestamp('2024-08-01 16:00:00-0400', tz='America/New_York')

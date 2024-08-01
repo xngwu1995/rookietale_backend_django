@@ -1,15 +1,15 @@
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from rest_framework import permissions
 from chatgpt.models import ChatGPTInteraction
 from chatgpt.api.serializers import ChatGPTInteractionSerializer
 from chatgpt.utils import ChatGPTApi
 from django.utils import timezone
+from utils.permissions import IsAdminUser
 
 
 class ChatgptViewSet(viewsets.ViewSet):
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (IsAdminUser,)
 
     @action(methods=['POST'], detail=False)
     def ask_chatgpt(self, request):

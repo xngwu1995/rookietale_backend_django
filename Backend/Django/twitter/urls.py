@@ -16,10 +16,10 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 from rest_framework import routers
-from LMT.api.views import LMTViewSet
 from accounts.api.views import UserProfileViewSet, UserViewSet, AccountViewSet
 from chatgpt.api.views import ChatgptViewSet
 from inbox.api.views import NotificationViewSet
+from stocks.api.views import StockViewSet, StrategyStockViewSet, TradeRecordViewSet, AIAnalysisViewSet
 from taskmanager.api.views import TaskmanagerViewSet
 from tweets.api.views import TweetViewSet
 from friendships.api.views import FriendshipViewSet
@@ -27,7 +27,6 @@ from newsfeeds.api.views import NewsFeedViewSet
 from comments.api.views import CommentViewSet
 from likes.api.views import LikeViewSet
 from rest_framework_simplejwt.views import TokenRefreshView
-from jacknews.api.views import JacknewsViewSet
 import debug_toolbar
 
 router = routers.DefaultRouter()
@@ -42,8 +41,10 @@ router.register(r'api/notifications', NotificationViewSet, basename = 'notificat
 router.register(r'api/profiles', UserProfileViewSet, basename='profiles')
 router.register(r'api/chatgpt', ChatgptViewSet, basename='chatgpt')
 router.register(r'api/taskmanager', TaskmanagerViewSet, basename='taskmanager')
-router.register(r'api/jacknews', JacknewsViewSet, basename='jacknews')
-router.register(r'api/LMT', LMTViewSet, basename='LMT')
+router.register(r'api/stocks/strategy', StrategyStockViewSet, basename='strategy')
+router.register(r'api/stocks/record', TradeRecordViewSet, basename='record')
+router.register(r'api/stocks/ai', AIAnalysisViewSet, basename='AIStock')
+router.register(r'api/stocks', StockViewSet, basename='stocks')
 
 
 urlpatterns = [
