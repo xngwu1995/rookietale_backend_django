@@ -1,4 +1,5 @@
-from stocks.models import Stock, StrategyData, TradeRecord
+import json
+from stocks.models import Stock, StrategyData, StrategyOptionData, TradeRecord
 from rest_framework import serializers
 
 class StockSerializer(serializers.ModelSerializer):
@@ -33,9 +34,8 @@ class TradeRecordSerializer(serializers.ModelSerializer):
             'sell_price',
             'sell_date',
             'revenue',
-            'closed'
         ]
-        read_only_fields = ['id', 'revenue', 'closed']
+        read_only_fields = ['id', 'revenue']
 
     def to_representation(self, instance):
         ret = super().to_representation(instance)
@@ -79,3 +79,11 @@ class TradeRecordUpdateSerializer(serializers.ModelSerializer):
         if not any(data.values()):
             raise serializers.ValidationError("At least one field (sell_reason, sell_price, or sell_date) must be provided for update.")
         return data
+
+
+class StrategyOptionDataSerializer(serializers.ModelSerializer):
+    ticker = serializers.CharField(source='stock.ticker', read_only=True)
+
+    class Meta:
+        model = StrategyOptionData
+        fields = '__all__'

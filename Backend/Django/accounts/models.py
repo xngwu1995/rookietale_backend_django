@@ -1,4 +1,5 @@
 # from accounts.listeners import profile_changed
+from datetime import date
 from django.contrib.auth.models import User
 from django.db import models
 # from django.db.models.signals import post_save, pre_delete
@@ -6,6 +7,10 @@ from django.db import models
 
 
 class UserProfile(models.Model):
+    GENDER_CHOICES = [
+        ('male', 'Male'),
+        ('female', 'Female'),
+    ]
     # One2One field 会创建一个 unique index，确保不会有多个 UserProfile 指向同一个 User
     user = models.OneToOneField(User, on_delete=models.SET_NULL, null=True)
     # Django 还有一个 ImageField，但是尽量不要用，会有很多的其他问题，用 FileField 可以起到
@@ -17,6 +22,13 @@ class UserProfile(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     expo_push_token = models.CharField(max_length=200, null=True, blank=True)
+    dob = models.DateField(verbose_name="Date of Birth", default=date(1995, 2, 14))
+    gender = models.CharField(
+        max_length=6,
+        choices=GENDER_CHOICES,
+        default='male',
+        verbose_name="Gender"
+    )
 
     def __str__(self):
         return '{} {}'.format(self.user, self.nickname)

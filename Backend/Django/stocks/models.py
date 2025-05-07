@@ -1,7 +1,9 @@
+from datetime import datetime
 from django.db import models
 from django.contrib.auth.models import User
 import yfinance as yf
 from django.core.cache import cache
+import logging
 
 
 class Stock(models.Model):
@@ -30,6 +32,21 @@ class StrategyData(models.Model):
 
     def __str__(self) -> str:
         return f"{self.stock.ticker} - {self.created_at.strftime('%Y-%m-%d')}"
+
+
+class StrategyOptionData(models.Model):
+    stock = models.ForeignKey(Stock, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    criteria = models.JSONField()
+    total_score = models.IntegerField()
+    decision = models.CharField(max_length=5)
+    weight = models.FloatField()
+
+    class Meta:
+        ordering = ('-created_at',)
+
+    def __str__(self) -> str:
+        return f"{self.stock.ticker} - option strategy - {self.created_at.strftime('%Y-%m-%d')}"
 
 
 class AIAnalysisData(models.Model):
@@ -67,16 +84,9 @@ class TradeRecord(models.Model):
         if self.sell_price and self.sell_date:
             return (self.sell_price - self.cost) * self.quantity
         return None
-    
-    @property
-    def closed(self):
-        stock_highest_value_key = f"highest_{self.stock.ticker}_lastmonth"
-        highest_price = cache.get(stock_highest_value_key, None)
-        if not highest_price:
-            stock_data = yf.download(self.stock.ticker, period="1mo", interval="1d")
-            highest_price = stock_data['High'].max()
-            cache.set(stock_highest_value_key, highest_price)
 
-        if highest_price:
-            return highest_price * 0.95
-        return None
+
+class StrategyRecordAnalysis(models.Model):
+    strategy_record = models.ForeignKey(StrategyData, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    gpt_analysis = models.TextField()

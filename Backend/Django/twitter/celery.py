@@ -26,6 +26,10 @@ def debug_task(self):
 app.conf.beat_schedule = {
     'get-latest-vcp-strategy': {
         'task': 'stocks.tasks.get_latest_vcp_strategy',
-        'schedule': crontab(hour=10, minute=15),
+        'schedule': crontab(hour=6, minute=15, day_of_week='1-5'),
+    },
+    'get-async-options': {
+        'task': 'stocks.tasks.get_async_options',
+        'schedule': crontab(hour=8, minute=41, day_of_week='1-5'),
     },
 }

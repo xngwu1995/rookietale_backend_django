@@ -107,93 +107,181 @@ class ChatGPTApi:
         )
         return self.get_response_from_gpt(prompt)
 
-    async def get_gpt_result(self, stock_symbol, session):
-        prompt = f'''
-        Stock Analysis Request: {stock_symbol}
-        Objective:
-        Provide a detailed analysis of {stock_symbol} stock to assess its investment potential.
-        
-        Financial Performance Analysis:
+    async def get_gpt_result(self, stock_symbol, session, language):
+        if language == 'english':
+            prompt = f'''
+            Stock Analysis Request: {stock_symbol}
+            Objective:
+            Provide a detailed analysis of {stock_symbol} stock to assess its investment potential.
+            
+            Financial Performance Analysis:
 
-        Earnings Per Share (EPS):
-        Current EPS (TTM)
-        EPS growth rate for the last 3 years (CAGR)
-        EPS estimates for the next two fiscal years
-        Price-to-Earnings Ratio (P/E Ratio):
-        Current P/E ratio
-        Average P/E ratio for the semiconductor industry
-        {stock_symbol}'s 5-year average P/E ratio
-        Based on these values, is {stock_symbol} currently overvalued, undervalued, or fairly valued?
-        Price/Earnings-to-Growth Ratio (PEG Ratio):
-        Calculate PEG ratio using current P/E and estimated EPS growth rate.
-        Interpret the PEG ratio: Is the stock's growth outlook justified by its current valuation?
-        Dividend Yield:
-        Current dividend yield
-        Dividend payout ratio
-        Average dividend yield for the semiconductor industry
-        Assessment of dividend sustainability (consider company's free cash flow and earnings growth)
-        
-        Growth and Profitability Analysis:
+            Earnings Per Share (EPS):
+            Current EPS (TTM)
+            EPS growth rate for the last 3 years (CAGR)
+            EPS estimates for the next two fiscal years
+            Price-to-Earnings Ratio (P/E Ratio):
+            Current P/E ratio
+            Average P/E ratio for the semiconductor industry
+            {stock_symbol}'s 5-year average P/E ratio
+            Based on these values, is {stock_symbol} currently overvalued, undervalued, or fairly valued?
+            Price/Earnings-to-Growth Ratio (PEG Ratio):
+            Calculate PEG ratio using current P/E and estimated EPS growth rate.
+            Interpret the PEG ratio: Is the stock's growth outlook justified by its current valuation?
+            Dividend Yield:
+            Current dividend yield
+            Dividend payout ratio
+            Average dividend yield for the semiconductor industry
+            Assessment of dividend sustainability (consider company's free cash flow and earnings growth)
+            
+            Growth and Profitability Analysis:
 
-        Revenue Growth:
-        Quarterly and annual revenue growth rates for the last 2 years
-        Key factors driving revenue growth (e.g., product segments, market trends)
-        Future revenue growth projections (if available)
-        Profit Margins:
-        Gross profit margin, operating profit margin, and net profit margin for the last 3 years
-        Compare {stock_symbol}'s margins to industry averages
-        Analyze trends in profit margins (are they expanding or contracting?)
-        Return on Equity (ROE):
-        Calculate ROE for the last 3 years
-        Compare {stock_symbol}'s ROE to industry averages
-        Assess how effectively {stock_symbol} generates profit from shareholders' equity
-        
-        Financial Health and Risk Analysis:
+            Revenue Growth:
+            Quarterly and annual revenue growth rates for the last 2 years
+            Key factors driving revenue growth (e.g., product segments, market trends)
+            Future revenue growth projections (if available)
+            Profit Margins:
+            Gross profit margin, operating profit margin, and net profit margin for the last 3 years
+            Compare {stock_symbol}'s margins to industry averages
+            Analyze trends in profit margins (are they expanding or contracting?)
+            Return on Equity (ROE):
+            Calculate ROE for the last 3 years
+            Compare {stock_symbol}'s ROE to industry averages
+            Assess how effectively {stock_symbol} generates profit from shareholders' equity
+            
+            Financial Health and Risk Analysis:
 
-        Market Capitalization:
-        Current market capitalization
-        Classification (large-cap, mega-cap, etc.)
-        How does {stock_symbol}'s size affect its risk and growth potential?
-        Debt-to-Equity Ratio:
-        Current debt-to-equity ratio
-        Compare to industry averages
-        Evaluate {stock_symbol}'s financial leverage and debt burden
-        Free Cash Flow (FCF):
-        Free cash flow for the last 3 years
-        FCF trends over time
-        Potential uses of FCF (e.g., share buybacks, dividends, R&D)
-        
-        Qualitative Analysis:
+            Market Capitalization:
+            Current market capitalization
+            Classification (large-cap, mega-cap, etc.)
+            How does {stock_symbol}'s size affect its risk and growth potential?
+            Debt-to-Equity Ratio:
+            Current debt-to-equity ratio
+            Compare to industry averages
+            Evaluate {stock_symbol}'s financial leverage and debt burden
+            Free Cash Flow (FCF):
+            Free cash flow for the last 3 years
+            FCF trends over time
+            Potential uses of FCF (e.g., share buybacks, dividends, R&D)
+            
+            Qualitative Analysis:
 
-        Competitive Advantage:
-        Identify {stock_symbol}'s key competitive advantages (technology leadership, strong brand, etc.)
-        Assess the durability of these advantages (are they likely to persist?)
-        Management Quality:
-        Evaluate the experience and track record of the leadership team
-        Consider the effectiveness of their strategic decisions
-        Industry Analysis:
-        Provide an overview of the semiconductor industry
-        Discuss major trends and risks (e.g., supply chain disruptions, technological shifts)
-        Analyze {stock_symbol}'s competitive position within the industry
-        
-        Investment Recommendation:
-        Based on the above analysis, provide a clear recommendation:
+            Competitive Advantage:
+            Identify {stock_symbol}'s key competitive advantages (technology leadership, strong brand, etc.)
+            Assess the durability of these advantages (are they likely to persist?)
+            Management Quality:
+            Evaluate the experience and track record of the leadership team
+            Consider the effectiveness of their strategic decisions
+            Industry Analysis:
+            Provide an overview of the semiconductor industry
+            Discuss major trends and risks (e.g., supply chain disruptions, technological shifts)
+            Analyze {stock_symbol}'s competitive position within the industry
+            
+            Investment Recommendation:
+            Based on the above analysis, provide a clear recommendation:
 
-        Buy: If you believe {stock_symbol} is a strong investment, explain why, highlighting the key factors supporting your decision.
-        Hold: If you believe the stock is fairly valued or has balanced risks and rewards, justify your neutral stance.
-        Sell: If you believe the stock is overvalued or faces significant headwinds, present the reasons for selling.
-        
-        Additional Considerations:
+            Buy: If you believe {stock_symbol} is a strong investment, explain why, highlighting the key factors supporting your decision.
+            Hold: If you believe the stock is fairly valued or has balanced risks and rewards, justify your neutral stance.
+            Sell: If you believe the stock is overvalued or faces significant headwinds, present the reasons for selling.
+            
+            Additional Considerations:
 
-        Risk Profile: Assess the overall risk level of investing in {stock_symbol}.
-        Investment Horizon: Consider whether {stock_symbol} is more suitable for short-term, medium-term, or long-term investors.
-        Alternative Investments: Briefly discuss other semiconductor stocks or relevant investment opportunities.
-        
-        Data Sources:
+            Risk Profile: Assess the overall risk level of investing in {stock_symbol}.
+            Investment Horizon: Consider whether {stock_symbol} is more suitable for short-term, medium-term, or long-term investors.
+            Alternative Investments: Briefly discuss other semiconductor stocks or relevant investment opportunities.
+            
+            Data Sources:
 
-        Use reputable and current financial data sources (e.g., SEC filings, Yahoo Finance, financial news outlets). Ensure data is as of today's date.
-        Cite your sources for transparency and credibility.
-        '''
+            Use reputable and current financial data sources (e.g., SEC filings, Yahoo Finance, financial news outlets). Ensure data is as of today's date.
+            Cite your sources for transparency and credibility.
+            '''
+        elif language == 'chinese':
+            prompt = f'''
+            股票分析请求：{stock_symbol}
+            目标：
+            提供{stock_symbol}股票的详细分析，以评估其投资潜力。
+
+            财务表现分析：
+
+            每股收益（EPS）：
+            当前EPS（TTM）
+            过去3年的EPS增长率（CAGR）
+            未来两个财政年度的EPS估计
+            市盈率（P/E比率）：
+            当前市盈率
+            半导体行业的平均市盈率
+            {stock_symbol}的5年平均市盈率
+            基于这些值，{stock_symbol}目前是高估、低估还是估值合理？
+            市盈率增长比率（PEG比率）：
+            使用当前P/E和预估EPS增长率计算PEG比率
+            解释PEG比率：股票的增长前景是否与当前估值相符？
+            股息收益率：
+            当前股息收益率
+            股息支付率
+            半导体行业的平均股息收益率
+            股息的可持续性评估（考虑公司的自由现金流和收益增长）
+
+            增长和盈利能力分析：
+
+            收入增长：
+            过去2年的季度和年度收入增长率
+            推动收入增长的关键因素（例如产品分部、市场趋势）
+            未来收入增长预测（如果有）
+            利润率：
+            过去3年的毛利率、营业利润率和净利润率
+            将{stock_symbol}的利润率与行业平均水平进行比较
+            分析利润率的趋势（是扩大还是收缩？）
+            股本回报率（ROE）：
+            计算过去3年的ROE
+            将{stock_symbol}的ROE与行业平均水平进行比较
+            评估{stock_symbol}从股东权益中产生利润的有效性
+
+            财务健康和风险分析：
+
+            市值：
+            当前市值
+            分类（大盘股、超大盘股等）
+            {stock_symbol}的规模如何影响其风险和增长潜力？
+            资产负债率：
+            当前资产负债率
+            与行业平均水平进行比较
+            评估{stock_symbol}的财务杠杆和债务负担
+            自由现金流（FCF）：
+            过去3年的自由现金流
+            自由现金流的时间趋势
+            自由现金流的潜在用途（例如股票回购、股息、研发）
+
+            定性分析：
+
+            竞争优势：
+            识别{stock_symbol}的关键竞争优势（技术领先、品牌强大等）
+            评估这些优势的持久性（它们是否可能持续存在？）
+            管理质量：
+            评估领导团队的经验和记录
+            考虑其战略决策的有效性
+            行业分析：
+            提供半导体行业的概述
+            讨论主要趋势和风险（例如供应链中断、技术变革）
+            分析{stock_symbol}在行业中的竞争地位
+
+            投资建议：
+            基于上述分析，提供明确的建议：
+
+            买入：如果你认为{stock_symbol}是一个强劲的投资，请解释原因，强调支持你决定的关键因素。
+            持有：如果你认为股票估值合理或风险与回报平衡，请说明你持中立立场的理由。
+            卖出：如果你认为股票被高估或面临重大阻力，请提出出售的理由。
+
+            其他考虑因素：
+
+            风险状况：评估投资{stock_symbol}的总体风险水平。
+            投资时间跨度：考虑{stock_symbol}是否更适合短期、中期或长期投资者。
+            替代投资：简要讨论其他半导体股票或相关的投资机会。
+
+            数据来源：
+
+            使用可靠和最新的财务数据来源（例如，SEC文件，雅虎财经，金融新闻媒体）。确保数据截至今日。
+            引用你的来源以确保透明性和可信度。
+            '''
         url = "https://api.openai.com/v1/chat/completions"
         headers = {
             "Content-Type": "application/json",
@@ -215,10 +303,11 @@ class ChatGPTApi:
         except Exception as e:
             self.logger.error(f"Error in get_response_from_gpt: {e}")
             return None
-    async def async_stocks_analysis(self, stock_symbols):
+
+    async def async_stocks_analysis(self, stock_symbols, language):
         async with aiohttp.ClientSession() as session:
             tasks = []
             for stock_symbol in stock_symbols:
-                tasks.append(asyncio.ensure_future(self.get_gpt_result(stock_symbol, session)))
+                tasks.append(asyncio.ensure_future(self.get_gpt_result(stock_symbol, session, language)))
             results = await asyncio.gather(*tasks)
         return results

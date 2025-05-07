@@ -73,7 +73,7 @@ def sequential_data_scrape(
             response = finviz_request(url, user_agent)
             kwargs["URL"] = url
             data.append(scrape_func(response, *args, **kwargs))
-            time.sleep(random.uniform(5, 10))  # Add a random delay between requests
+            time.sleep(random.uniform(1, 3))  # Add a random delay between requests
         except TooManyRequestsException as exc:
             print(f"Rate limit error fetching {url}: {exc}. Adding a longer delay.")
             time.sleep(5)  # Longer delay for rate limit issues

@@ -1,4 +1,6 @@
+from datetime import datetime
 from django.contrib.auth.models import User
+from django.forms import ValidationError
 from rest_framework import serializers, exceptions
 
 from accounts.models import UserProfile
@@ -61,12 +63,15 @@ class LoginSerializer(serializers.Serializer):
 
 
 class SignupSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(max_length = 20, min_length = 6)
-    password = serializers.CharField(max_length = 20, min_length = 6)
+    username = serializers.CharField(max_length=20, min_length=6)
+    password = serializers.CharField(max_length=20, min_length=6)
     email = serializers.EmailField()
+    birthday = serializers.CharField(write_only=True)
+    gender = serializers.ChoiceField(choices=[('male', 'Male'), ('female', 'Female')], default='male')
+
     class Meta:
         model = User
-        fields = ('username', 'email', 'password')
+        fields = ('username', 'email', 'password', 'birthday', 'gender')
 
     # will be called when is_valid
     def validate(self, data):
@@ -84,12 +89,34 @@ class SignupSerializer(serializers.ModelSerializer):
             raise exceptions.ValidationError({
                 'email': 'This email address has been occupied.'
             })
+        dob_str = data.get('birthday')
+        if dob_str:
+            try:
+                # Validate format and convert to datetime
+                datetime.strptime(dob_str, "%Y/%m/%d")
+            except ValueError:
+                raise exceptions.ValidationError({
+                    'birthday': 'Date of Birth must be in YYYY/MM/DD format.'
+                })
+
         return data
 
     def create(self, validated_data):
         username = validated_data['username'].lower()
         email = validated_data['email'].lower()
         password = validated_data['password']
+        dob_str = validated_data.get('birthday')
+        gender = validated_data.get('gender', 'male')
+
+        # Convert birthday string to datetime.date object
+        dob = None
+        if dob_str:
+            try:
+                dob = datetime.strptime(dob_str, "%Y/%m/%d").date()
+            except ValueError:
+                raise exceptions.ValidationError({
+                    'birthday': 'Invalid Date of Birth format.'
+                })
 
         user = User.objects.create_user(
             username=username,
@@ -97,13 +124,17 @@ class SignupSerializer(serializers.ModelSerializer):
             password=password,
         )
         #Create UserProfile object
-        user.profile
+        UserProfile.objects.create(
+            user=user,
+            dob=dob,
+            gender=gender,
+        )
         return user
     
 class UserProfileSerializerForUpdate(serializers.ModelSerializer):
     class Meta:
         model = UserProfile
-        fields = ('nickname', 'avatar')
+        fields = ('nickname', 'avatar', 'dob', 'gender')
 
 
 class UserProfileSerializerForPushTokenUpdate(serializers.ModelSerializer):
