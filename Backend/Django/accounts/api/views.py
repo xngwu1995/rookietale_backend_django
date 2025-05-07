@@ -80,7 +80,7 @@ class AccountViewSet(viewsets.ViewSet):
                 "message": "Please check input",
                 "errors": serializer.errors,
             }, status = 400)
-        username = serializer.validated_data['username']
+        username = serializer.validated_data['username'].lower()
         password = serializer.validated_data['password']
 
         user = django_authenticate(username=username, password=password)
@@ -129,9 +129,15 @@ class UserProfileViewSet(
     viewsets.GenericViewSet,
     viewsets.mixins.UpdateModelMixin,
 ):
-    queryset = UserProfile
+    queryset = UserProfile.objects.all()
     permission_classes = (IsObjectOwner,)
     serializer_class = UserProfileSerializerForUpdate
+
+    def get_object(self):
+        try:
+            return UserProfile.objects.get(user_id=self.kwargs['pk'])
+        except UserProfile.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
     @action(methods=['PUT'], detail=True)
     def edit_user_token(self, request, pk=None):

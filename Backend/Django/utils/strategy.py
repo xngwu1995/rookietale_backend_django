@@ -5,11 +5,14 @@ import yfinance as yf
 from yahoo_fin import stock_info as si
 from pandas import DataFrame, Series
 from numpy import ndarray
+from stocks.api.serializers import StrategyStockSerializer
 from utils.finviz.screener import Screener # type: ignore
 from scipy.signal import argrelextrema # type: ignore
 from typing import List, Tuple, Dict, Optional
 from stocks.models import Stock, StrategyData
 from django.core.cache import cache
+
+from utils.utils import today_date
 
 
 class Strategy:
@@ -144,19 +147,26 @@ class Analysis:
         print(stocks)
 
 
+# Define the VCP (Volatility Contraction Pattern) Strategy class
 class VCP_Strategy:
-
+    # Constructor to initialize the object
     def __init__(self) -> None:
+        # Define attributes to store stock data and today's date
         self.ticker_list: List[str]
         self.rs_dict: Dict[str, int]
         self.df_spx: Dict[str, float]
-        self.today = datetime.datetime.today().date()
+        self.today = today_date()
+        
+        # Define cache key for VCP data to avoid recalculating if already stored
         vcp_cache_key = f"vcp_{self.today}"
         self.ticker_list, self.rs_dict, self.df_spx = cache.get(vcp_cache_key, (None, None, None))
+        
+        # If data is not available in cache, fetch initial data and store it in cache
         if self.ticker_list is None:
             self.ticker_list, self.rs_dict, self.df_spx = self.get_init_data()
             cache.set(vcp_cache_key, (self.ticker_list, self.rs_dict, self.df_spx))
 
+        # Initialize a DataFrame to store VCP screening results
         self.radar: DataFrame = DataFrame({
             'Ticker': [],
             'Num_of_contraction': [],
@@ -166,31 +176,35 @@ class VCP_Strategy:
             'RS_rating': []
         })
 
+    # Method to get initial stock data for screening
     def get_init_data(self):
+        # Filters to fetch stocks that meet basic volume and price criteria
         filters = ['cap_smallover','sh_avgvol_o100','sh_price_o2','ta_sma200_sb50','ta_sma50_pa']
 
-        # Fetch and save ticker data
+        # Fetch and save ticker data based on filters (using FinViz screener)
         stock_list = Screener(filters=filters, table='Performance', order='asc', rows=960)
         ticker_table = pd.DataFrame(stock_list.data)
         ticker_list = ticker_table['Ticker'].to_list()
 
-        # Fetch and save RS data
+        # Fetch RS (Relative Strength) data and create a dictionary for ranking stocks
         performance_table = Screener(table='Performance', order='-perf52w', rows=3000)
         rs_table = pd.DataFrame(performance_table.data)
         rs_list = rs_table['Ticker'].to_list()
-
         rs_dict = {value: index for index, value in enumerate(rs_list)}
+
+        # Fetch S&P 500 data for comparing relative strength
         end_date = pd.to_datetime('today')
         start_date = end_date - pd.DateOffset(years=2)
         df_spx = si.get_data(ticker='^GSPC', start_date=start_date, end_date=end_date)
 
         return ticker_list, rs_dict, df_spx
 
-    # determine whether MA200 is uptrend or not
+    # Method to calculate the trend value of moving averages (MA200)
     def trend_value(self, nums: List[float]) -> float:
+        # Calculate slope of the given data (used to determine trend direction)
         summed_nums: float = sum(nums)
         multiplied_data: float = 0
-        summed_index: float = 0 
+        summed_index: float = 0
         squared_index: float = 0
 
         for index, num in enumerate(nums):
@@ -199,6 +213,7 @@ class VCP_Strategy:
             summed_index += index
             squared_index += index**2
 
+        # Calculate the slope of the trend line using least squares method
         numerator: float = (len(nums) * multiplied_data) - (summed_nums * summed_index)
         denominator: float = (len(nums) * squared_index) - summed_index**2
         if denominator != 0:
@@ -206,13 +221,14 @@ class VCP_Strategy:
         else:
             return 0
 
-    # determine whether the ticker fulfills trend template
+    # Method to apply the trend template and check if stock meets criteria for Stage 2
     def trend_template(self, df: DataFrame) -> DataFrame:
-        # calculate moving averages
+        # Calculate moving averages: MA_50, MA_150, MA_200
         df['MA_50'] = round(df['Close'].rolling(window=50).mean(), 2)
         df['MA_150'] = round(df['Close'].rolling(window=150).mean(), 2)
         df['MA_200'] = round(df['Close'].rolling(window=200).mean(), 2)
         
+        # Calculate 52-week high and low
         if len(df.index) > 5 * 52:
             df['52_week_low'] = df['Low'].rolling(window = 5*52).min()
             df['52_week_high'] = df['High'].rolling(window = 5*52).max()
@@ -220,42 +236,32 @@ class VCP_Strategy:
             df['52_week_low'] = df['Low'].rolling(window = len(df.index)).min()
             df['52_week_high'] = df['High'].rolling(window = len(df.index)).max()
         
-        # condition 1&5: Price is above both 150MA and 200MA & above 50MA
+        # Define multiple conditions that need to be met for Stage 2 (Uptrend)
         df['condition_1'] = (df['Close'] > df['MA_150']) & (df['Close'] > df['MA_200']) & (df['Close'] > df['MA_50'])
-        
-        # condition 2&4: 150MA is above 200MA & 50MA is above both
         df['condition_2'] = (df['MA_150'] > df['MA_200']) & (df['MA_50'] > df['MA_150'])
-        
-        # condition 3: 200MA is trending up for at least 1 month
         slope: Series = df['MA_200'].rolling(window = 20).apply(self.trend_value, raw=True)
         df['condition_3'] = slope > 0.0
-        
-        # condition 6: Price is at least 30% above 52 week low
         df['condition_6'] = df['Low'] > (df['52_week_low'] * 1.3)
-        
-        # condition 7: Price is at least 25% of 52 week high
         df['condition_7'] = df['High'] > (df['52_week_high'] * 0.75)
-        
-        # condition 9 (additional): The relative strength line, which compares a stock's price performance to that of the S&P 500.
-        # An upward trending RS line tells you the stock is outperforming the general market.
         df['RS'] = df['Close'] / self.df_spx['close']
         slope_rs: Series = df['RS'].rolling(window = 20).apply(self.trend_value, raw=True)
         df['condition_8'] = slope > 0.0
         df['condition_9'] = slope_rs > 0.0
         
+        # If all conditions are met, mark as 'Pass'
         df['Pass'] = df[
             ['condition_1','condition_2','condition_3','condition_6','condition_7','condition_8', 'condition_9']
         ].all(axis='columns')
         
         return df
 
-    # determine local maxima and minima
+    # Find local maxima and minima in price data to identify potential contraction points
     def local_high_low(self, df: DataFrame) -> Tuple[List[int], List[int]]:
+        # Identify local highs and lows (turning points)
         local_high: ndarray = argrelextrema(df['High'].to_numpy(),np.greater,order=10)[0]
         local_low: ndarray = argrelextrema(df['Low'].to_numpy(),np.less,order=10)[0]
         
-        # eliminate for consecutive highs or lows
-        # create adjusted local highs and lows
+        # Eliminate consecutive highs or lows by selecting significant points
         i: int = 0
         j: int = 0
         adjusted_local_high: List[int] = []
@@ -280,7 +286,7 @@ class VCP_Strategy:
                 i += 1
                 j += 1
         
-        # add any remaining elements from local_high or local_low
+        # Add remaining elements from local_high or local_low
         if i < len(local_high):
             adjusted_local_high.pop(-1)
             while i < len(local_high):
@@ -304,7 +310,7 @@ class VCP_Strategy:
             adjusted_local_high.append(local_high[i-1])
         return adjusted_local_high, adjusted_local_low
 
-    # measure the depth of contractions
+    # Calculate the depth of contractions between local highs and lows
     def contractions(self, df: DataFrame, local_high: List[int], local_low: List[int]) -> List[float]:
         local_high = local_high[::-1]
         local_low = local_low[::-1]
@@ -325,7 +331,7 @@ class VCP_Strategy:
                 j += 1
         return contraction
 
-    # measure number of contractions
+    # Method to count the number of contractions
     def num_of_contractions(self, contraction: List[float]) -> int:
         new_c: float = 0.0
         num_of_contraction: int = 0
@@ -337,34 +343,35 @@ class VCP_Strategy:
                 break
         return num_of_contraction
 
-    # measure depth of maximum and minimum contraction
+    # Method to calculate the depth of maximum and minimum contractions
     def max_min_contraction(self, contraction: List[float], num_of_contractions: int) -> Tuple[float, float]:
         max_contraction = contraction[num_of_contractions - 1]
         min_contraction = contraction[0]
         return max_contraction, min_contraction
 
-    # measure days of contraction
+    # Calculate the weeks of contraction based on price action
     def weeks_of_contraction(self, df: DataFrame, local_high: List[int], num_of_contractions: int) -> float:
         week_of_contraction: float = (len(df.index) - local_high[::-1][num_of_contractions - 1]) / 5
         return week_of_contraction
 
-    # determine whether the ticker has VCP
+    # Main VCP method to determine if a stock follows the VCP pattern
     def vcp(self, df: DataFrame) -> Tuple[int, float, float, float, int]:
-        # prepare data for contractions measurement
+        # Identify local highs and lows
         local_high: List[int]
         local_low: List[int]
         local_high, local_low = self.local_high_low(df)
 
+        # Calculate the contraction values
         contraction: List[float] = self.contractions(df, local_high, local_low)
         
-        # calculate no. of contractions
+        # Calculate number of contractions and determine if they meet criteria
         num_of_contraction: int = self.num_of_contractions(contraction)
         if 2 <= num_of_contraction <= 4:
             flag_num = 1
         else:
             flag_num = 0
         
-        # calculate depth of contractions
+        # Calculate depth of contractions
         max_c: float = 0.0
         min_c: float = 0.0
         flag_max: int = 1
@@ -377,32 +384,33 @@ class VCP_Strategy:
         if min_c <= 15:
             flag_min = 1
 
-        # calculate weeks of contractions
+        # Calculate weeks of contractions and determine if they meet criteria
         week_of_contraction: float = self.weeks_of_contraction(df, local_high, num_of_contraction)
         flag_week: int = 0
         if week_of_contraction >= 2:
             flag_week = 1
         
+        # Determine volume contraction
         df['30_day_avg_volume'] = round(df['Volume'].rolling(window = 30).mean(),2)
         df['5_day_avg_volume'] = round(df['Volume'].rolling(window = 5).mean(),2)
-        # criteria_2: Volume contraction
         flag_vol: int = 0
         df['vol_contraction'] = df['5_day_avg_volume'] < df['30_day_avg_volume']
         if df['vol_contraction'][-1] == 1:
             flag_vol = 1
             
-        # criteria 3: Not break out yet
+        # Ensure the stock is still consolidating (hasn't broken out yet)
         flag_consolidation: int = 0
         if df['High'].iloc[-1] < df['High'].iloc[local_high[-1]]:
             flag_consolidation = 1
         
+        # Final check: Ensure all criteria are met for VCP
         flag_final: int = 0
         if flag_num == 1 & flag_max == 1 & flag_min == 1 & flag_week == 1 & flag_vol == 1 & flag_consolidation == 1:
             flag_final = 1
         
         return num_of_contraction, max_c, min_c, week_of_contraction, flag_final
 
-    # calculate RS rating
+    # Method to calculate the RS (Relative Strength) rating of a stock
     def rs_rating(self, ticker: str) -> int:
         total_stocks: int = 478 * 20
         ticker_index: Optional[int] = self.rs_dict.get(ticker)
@@ -411,37 +419,30 @@ class VCP_Strategy:
             rs = int(round((total_stocks - ticker_index) / total_stocks * 100, 0))
         return rs
 
+    # Method to get historical data for a given stock ticker
     def get_ticker_history(self, stock_ticker: str, period: int = 2) -> pd.DataFrame:
-        # Calculate the start date based on the period in years
         end_date = pd.to_datetime('today')
         start_date = end_date - pd.DateOffset(years=period)
 
-        stock = yf.Ticker(stock_ticker)
-
-        # Create a cache key that includes the stock ticker and today's date
+        # Cache the data for faster access
         cache_key = f"{stock_ticker}_{self.today}"
         data = cache.get(cache_key, None)
         if not isinstance(data, pd.DataFrame):
-            data = si.get_data(stock_ticker, start_date=start_date, end_date=end_date)
-            # Get trailing P/E ratio
-            trailing_pe = stock.info.get('trailingPE', 0) # Handle missing values
+            try:
+                data = si.get_data(stock_ticker, start_date=start_date, end_date=end_date)
+                if data is None or data.empty:
+                    print(f"Failed to get data for {stock_ticker}.")
+                    return pd.DataFrame()
+                cache.set(f"{cache_key}", data)
+            except Exception as e:
+                print(f"Error occurred while fetching data for {stock_ticker}: {e}")
+                return pd.DataFrame()
 
-            # Get EPS growth (example: 5-year growth rate)
-            eps_growth = stock.info.get('earningsQuarterlyGrowth', 0)  
-
-            # Add P/E and EPS growth to the DataFrame
-            data['trailingPE'] = trailing_pe
-            data['epsGrowth'] = eps_growth
-            cache.set(f"{cache_key}", data)
-
-        # Drop any rows with missing values
         history_data = data.dropna()
-
-        # If the data is empty, return an empty DataFrame
         if history_data.empty:
             return pd.DataFrame()
 
-        # Rename columns to match the desired format
+        # Rename columns to match desired format
         history_data.rename(columns={
             'open': 'Open',
             'high': 'High',
@@ -453,19 +454,25 @@ class VCP_Strategy:
         
         return history_data
 
+    # Main method to execute the VCP strategy and screen stocks
     def execute(self) -> None:
         for ticker_string in self.ticker_list:
             try:
-                ticker_history = self.get_ticker_history(ticker_string) # Get the data of stocks
-                trend_template_screener = self.trend_template(ticker_history) # Determine whether the stocks is in Stage 2
+                # Get historical data for the ticker
+                ticker_history = self.get_ticker_history(ticker_string)
+                if ticker_history.empty:
+                    continue
+                # Determine if the stock is in a Stage 2 uptrend
+                trend_template_screener = self.trend_template(ticker_history)
                 if trend_template_screener['Pass'][-1] == 1 and trend_template_screener['Pass'][-2] == 1:
                     print(f'{ticker_string} is in Stage 2')
-                    vcp_screener = list(self.vcp(ticker_history)) # Determine whether the stocks is in Stage 2
-                    rs = self.rs_rating(ticker_string) # Calculate RS rating
-                    if vcp_screener[-1] == 1 and rs >= 70:
+                    # Determine if the stock forms a valid VCP pattern
+                    vcp_screener = list(self.vcp(ticker_history))
+                    rs = self.rs_rating(ticker_string)
+                    if vcp_screener[-1] == 1 and rs >= 75:
                         vcp_screener.insert(0, ticker_string)
                         vcp_screener.insert(-1, rs)
-                        self.radar.loc[len(self.radar)] = vcp_screener[0:6] # Store the results to the dataframe
+                        self.radar.loc[len(self.radar)] = vcp_screener[0:6]
                         print(f'{ticker_string} has a VCP')
                     else:
                         print(f'{ticker_string} does not have a VCP')
@@ -473,9 +480,11 @@ class VCP_Strategy:
                     print(f'{ticker_string} is not in Stage 2')
             except Exception as err:
                 print(f'Get Error {err}')
+        
+        # Save the screening results in the database
         for index, row in self.radar.iterrows():
             stock: Stock = Stock.objects.get(ticker=row['Ticker'])
-            StrategyData.objects.create(
+            obj = StrategyData.objects.create(
                 stock=stock,
                 strategy='VCP',
             )

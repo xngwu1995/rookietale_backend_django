@@ -1,0 +1,3 @@
+web: gunicorn --bind 127.0.0.1:8000 --workers=1 --threads=15 twitter.wsgi:application
+celery_beat: celery -A twitter.celery beat -l INFO
+celery_worker: celery -A twitter.celery worker -l INFO -P solo

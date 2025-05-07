@@ -1,9 +1,7 @@
 from datetime import datetime
-import json
 import yfinance as yf
 import numpy as np
 import pandas_ta as ta
-from django.core.cache import cache
 from stocks.models import Stock, StrategyOptionData
 import random
 
@@ -12,31 +10,26 @@ class StockScreening:
     def __init__(self):
         self.stock_list = list(Stock.objects.values_list('ticker', flat=True))
         self.results = []
-        self.cache_key = f"stock_options_result_{datetime.now().strftime('%Y-%m-%d')}"
-
-    def get_results(self):
-        cached_results = cache.get(self.cache_key)
-        if cached_results is not None:
-            return cached_results
-        return self.run_screening()
 
     def run_screening(self):
-        stock_list = list(Stock.objects.values_list('ticker', flat=True))
-
-        for stock_symbol in stock_list:
-            self.process_screen(stock_symbol)
+        stock_list = list(Stock.objects.values('id', 'ticker'))
+        for stock in stock_list:
+            stock_id, stock_symbol = stock.get('id'), stock.get('ticker')
+            if not stock_id or not stock_symbol:
+                return
+            self.process_screen(stock_symbol, stock_id)
         if self.results:
             StrategyOptionData.objects.bulk_create(self.results)
         return self.results
 
-    def process_screen(self, ticker):
+    def process_screen(self, ticker, stock_id):
         try:
             print(f"Processing {ticker}...")
             stock = yf.Ticker(ticker)
 
             # Get current price
             current_price = self.get_current_price(stock)
-            if current_price is None:
+            if not self.is_valid_value(current_price):
                 return
 
             # Get options data
@@ -45,11 +38,13 @@ class StockScreening:
 
             # Get historical data and average volume
             hist, avg_volume = self.get_historical_data(stock, ticker)
-            if hist is None:
+            if not self.is_valid_value(hist) or not self.is_valid_value(avg_volume):
                 return
 
             # Calculate historical volatility
             hist_volatility = self.calculate_historical_volatility(hist)
+            if not self.is_valid_value(hist_volatility):
+                return
 
             # Get fundamental factors
             financial_data = self.get_fundamental_factors(stock, ticker)
@@ -58,18 +53,21 @@ class StockScreening:
 
             # Get technical indicators
             sma50, sma200, rsi = self.get_technical_indicators(hist)
+            if not self.is_valid_value(sma50) or not self.is_valid_value(sma200) or not self.is_valid_value(rsi):
+                return
 
             # Apply screening criteria
             criteria = self.apply_screening_criteria(avg_volume, hist_volatility, financial_data, sma50, sma200, rsi)
 
             # Evaluate criteria and store results
-            self.evaluate_criteria(criteria, ticker, current_price, avg_volume, hist_volatility, financial_data, sma50, sma200, rsi)
+            self.evaluate_criteria(stock_id, criteria, ticker, current_price, avg_volume, hist_volatility, financial_data, sma50, sma200, rsi)
         except Exception as e:
             print(f"Error processing {ticker}: {e}")
 
     def get_current_price(self, stock):
         try:
-            return stock.history(period='1d')['Close'].iloc[-1]
+            hist = stock.history(period='5d')
+            return hist['Close'].iloc[-1] if not hist.empty else None
         except Exception:
             print("Unable to fetch current price. Skipping.")
             return None
@@ -113,21 +111,26 @@ class StockScreening:
             return None, None
 
     def calculate_historical_volatility(self, hist):
-        hist['Returns'] = hist['Close'].pct_change()
-        return hist['Returns'].std() * np.sqrt(252)  # 252 trading days in a year
+        try:
+            hist['Returns'] = hist['Close'].pct_change()
+            return hist['Returns'].std() * np.sqrt(252)  # 252 trading days in a year
+        except Exception:
+            print("Unable to calculate historical volatility. Skipping.")
+            return None
 
     def get_fundamental_factors(self, stock, ticker):
         try:
-            financials = stock.financials
-            balance_sheet = stock.balance_sheet
-            if financials.empty or balance_sheet.empty:
-                print(f"Incomplete fundamental data for {ticker}. Skipping.")
+            financials, balance_sheet = self.validate_data_availability(stock, ticker)
+            if financials is None or balance_sheet is None:
                 return None
 
             recent_revenue_growth = self.calculate_revenue_growth(financials, ticker)
             total_debt, total_equity = self.get_debt_and_equity(balance_sheet)
-            debt_to_equity = total_debt / total_equity if total_equity != 0 else np.nan
-            net_income = financials.loc['Net Income'].iloc[0] if 'Net Income' in financials.index else np.nan
+            debt_to_equity = self.calculate_debt_to_equity(total_debt, total_equity)
+            net_income = self.get_financial_value(financials, ['Net Income'])
+
+            if any(value is None for value in [recent_revenue_growth, total_debt, total_equity, debt_to_equity, net_income]):
+                return None
 
             return {
                 'recent_revenue_growth': recent_revenue_growth,
@@ -138,75 +141,100 @@ class StockScreening:
             print(f"Error fetching fundamental data for {ticker}: {e}")
             return None
 
+    def validate_data_availability(self, stock, ticker):
+        financials = stock.financials
+        balance_sheet = stock.balance_sheet
+
+        if financials is None or balance_sheet is None or financials.empty or balance_sheet.empty:
+            print(f"Incomplete fundamental data for {ticker}. Skipping.")
+            return None, None
+
+        return financials, balance_sheet
+
     def calculate_revenue_growth(self, financials, ticker):
         try:
+            if 'Total Revenue' not in financials.index:
+                print(f"Missing Total Revenue data for {ticker}. Skipping.")
+                return None
+
             revenues = financials.loc['Total Revenue'].dropna()
             if len(revenues) < 2:
                 print(f"Not enough revenue data for {ticker}. Skipping.")
                 return None
+
             return (revenues.iloc[0] - revenues.iloc[1]) / revenues.iloc[1]
-        except Exception:
+        except Exception as e:
+            print(f"Error calculating revenue growth for {ticker}: {e}")
             return None
 
     def get_debt_and_equity(self, balance_sheet):
-        debt_labels = ['Total Debt', 'Long Term Debt', 'Long Term Debt & Capital Lease Obligation']
-        equity_labels = ['Total Stockholder Equity', 'Total Shareholder Equity', 'Total Equity Gross Minority Interest']
-        total_debt = self.get_financial_value(balance_sheet, debt_labels)
-        total_equity = self.get_financial_value(balance_sheet, equity_labels)
+        total_debt = self.get_financial_value(balance_sheet, ['Total Debt', 'Long Term Debt', 'Long Term Debt & Capital Lease Obligation'])
+        total_equity = self.get_financial_value(balance_sheet, ['Total Stockholder Equity', 'Total Shareholder Equity', 'Total Equity Gross Minority Interest'])
+        
         return total_debt, total_equity
+
+    def calculate_debt_to_equity(self, total_debt, total_equity):
+        if total_debt is None or total_equity is None or total_equity == 0:
+            return None
+        return total_debt / total_equity
 
     def get_financial_value(self, data, labels):
         for label in labels:
             if label in data.index:
-                return data.loc[label].iloc[0]
-        return np.nan
+                value = data.loc[label].iloc[0]
+                if not np.isnan(value):
+                    return value
+        return None
 
     def get_technical_indicators(self, hist):
-        hist['SMA50'] = hist['Close'].rolling(window=50).mean()
-        hist['SMA200'] = hist['Close'].rolling(window=200).mean()
-        hist['RSI'] = ta.rsi(hist['Close'], length=14)
-        return hist['SMA50'].iloc[-1], hist['SMA200'].iloc[-1], hist['RSI'].iloc[-1]
+        try:
+            hist['SMA50'] = hist['Close'].rolling(window=50).mean()
+            hist['SMA200'] = hist['Close'].rolling(window=200).mean()
+            hist['RSI'] = ta.rsi(hist['Close'], length=14)
+            return hist['SMA50'].iloc[-1], hist['SMA200'].iloc[-1], hist['RSI'].iloc[-1]
+        except Exception:
+            print("Unable to calculate technical indicators. Skipping.")
+            return None, None, None
 
     def apply_screening_criteria(self, avg_volume, hist_volatility, financial_data, sma50, sma200, rsi):
         return {
-            'Options Volume': (self.options_volume > 10_000, 1),
-            'Open Interest': (self.open_interest > 10_000, 1),
-            'Average Volume': (avg_volume > 1_000_000, 2),
-            'Historical Volatility': (hist_volatility > 0.3, 1),
-            'Implied Volatility': (self.avg_implied_volatility is not None and self.avg_implied_volatility > 0.3, 2),
+            'Options Volume': (self.is_valid_value(self.options_volume) and self.options_volume > 10_000, 1),
+            'Open Interest': (self.is_valid_value(self.open_interest) and self.open_interest > 10_000, 1),
+            'Average Volume': (self.is_valid_value(avg_volume) and avg_volume > 1_000_000, 2),
+            'Historical Volatility': (self.is_valid_value(hist_volatility) and hist_volatility > 0.3, 1),
+            'Implied Volatility': (self.is_valid_value(self.avg_implied_volatility) and self.avg_implied_volatility > 0.3, 2),
             'Revenue Growth': (financial_data['recent_revenue_growth'] is not None and financial_data['recent_revenue_growth'] > 0, 3),
             'Debt to Equity': (financial_data['debt_to_equity'] is not None and not np.isnan(financial_data['debt_to_equity']) and financial_data['debt_to_equity'] < 1.0, 2),
             'Net Income': (financial_data['net_income'] is not None and not np.isnan(financial_data['net_income']) and financial_data['net_income'] > 0, 3),
-            'Trend': (sma50 > sma200, 2),
-            'RSI': (rsi < 70, 1),
+            'Trend': (self.is_valid_value(sma50) and self.is_valid_value(sma200) and sma50 > sma200, 2),
+            'RSI': (self.is_valid_value(rsi) and rsi < 70, 1),
         }
 
-    def evaluate_criteria(self, criteria, ticker, current_price, avg_volume, hist_volatility, financial_data, sma50, sma200, rsi):
+    def evaluate_criteria(self, stock_id, criteria, ticker, current_price, avg_volume, hist_volatility, financial_data, sma50, sma200, rsi):
         total_score, criteria_values = 0, {}
 
         for criterion, (met, score) in criteria.items():
             if met:
                 total_score += score
+            value = self.get_actual_value(criterion, current_price, avg_volume, hist_volatility, financial_data, sma50, sma200, rsi)
+            if isinstance(value, (np.integer, np.floating)):
+                value = value.item()  # Convert numpy types to native Python types
             criteria_values[criterion] = {
-                'value': self.get_actual_value(criterion, current_price, avg_volume, hist_volatility, financial_data, sma50, sma200, rsi)
+                'value': value
             }
+
         price_sma_diff = ((current_price - sma50) / sma50) * 100
-        threshold = 2.0  # This can be adjusted based on preference
-        if abs(price_sma_diff) <= threshold:
-            # Proceed with the strategy as the price is close to the SMA
-            if current_price > sma50:
-                decision = 'Call'
-            else:
-                decision = 'Put'
+        # Proceed with the strategy as the price is close to the SMA
+        if current_price > sma50 and price_sma_diff >= 5:
+            decision = 'Call'
         else:
-            # The price is far from the SMA; exercise caution
-            decision = 'Hold'
+            decision = 'Put'
 
         # Check if all required data is present before appending to result
         if all(value is not None for value in [ticker, criteria_values, total_score, decision, price_sma_diff]):
             self.results.append(StrategyOptionData(
-                stock=self.stock,
-                criteria=json.dumps(criteria_values),
+                stock_id=stock_id,
+                criteria=criteria_values,
                 total_score=total_score,
                 decision=decision,
                 weight=price_sma_diff
@@ -227,6 +255,9 @@ class StockScreening:
             'Current Price': current_price
         }
         return values.get(criterion, None)
+
+    def is_valid_value(self, value):
+        return value is not None and not (isinstance(value, (float, int)) and np.isnan(value))
 
 
 # 天干
@@ -331,9 +362,9 @@ class TradingDayAnalyzer:
 
         # Determine if today is a good day for trading
         if fortune_score > random.randint(0, 100):
-            result = "根据古老的命理分析，今天是交易的好日子！"
+            result, buy = "根据古老的命理分析，今天是交易的好日子！\n Today is a good day for trading", True
         else:
-            result = "根据古老的命理分析，今天可能不太适合交易。"
+            result, buy = "根据古老的命理分析，今天可能不太适合交易。\n Today is not a good day for trading", False
 
         # 可以加入更多的分析和解释
-        return result
+        return result, buy
