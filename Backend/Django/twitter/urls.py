@@ -19,6 +19,7 @@ from rest_framework import routers
 from accounts.api.views import UserProfileViewSet, UserViewSet, AccountViewSet
 from chatgpt.api.views import ChatgptViewSet
 from inbox.api.views import NotificationViewSet
+from orders.api.views import MenuViewSet, OrderViewSet, SessionViewSet
 from stocks.api.views import StockViewSet, StrategyStockViewSet, TradeRecordViewSet, AIAnalysisViewSet
 from taskmanager.api.views import TaskmanagerViewSet
 from tweets.api.views import TweetViewSet
@@ -45,6 +46,9 @@ router.register(r'api/stocks/strategy', StrategyStockViewSet, basename='strategy
 router.register(r'api/stocks/record', TradeRecordViewSet, basename='record')
 router.register(r'api/stocks/ai', AIAnalysisViewSet, basename='AIStock')
 router.register(r'api/stocks', StockViewSet, basename='stocks')
+router.register(r'api/sessions', SessionViewSet, basename='sessions')
+router.register(r'api/orders', OrderViewSet, basename='orders')
+router.register(r'api/menus', MenuViewSet, basename='menus')
 
 
 urlpatterns = [
